@@ -1223,24 +1223,36 @@ Please create a detailed development plan that:
             const apiKey = document.getElementById('apiKey').value;
             const projectDescription = document.getElementById('projectDescription').value;
             const projectLanguage = document.getElementById('projectLanguage').value;
-            const maxDailyHours = document.getElementById('maxDailyHours').value;
-            const teamMembers = Array.from(document.querySelectorAll('#teamMembers .card')).map(card => ({
-                name: card.querySelector('input[placeholder="Team Member Name"]').value,
-                rate: card.querySelector('input[placeholder="0.00"]').value,
-                currency: card.querySelector('select').value
-            }));
+            const teamMembers = Array.from(document.querySelectorAll('.team-member')).map(member => {
+                const nameInput = member.querySelector('input[type="text"]');
+                const rateInput = member.querySelector('input[type="number"]');
+                const currencySelect = member.querySelector('select');
+                return {
+                    name: nameInput.value,
+                    rate: rateInput.value,
+                    currency: currencySelect.value
+                };
+            });
 
-            const hashData = {
+            const data = {
                 apiKey,
                 projectDescription,
                 projectLanguage,
-                maxDailyHours,
-                teamMembers,
-                projectPlan: window.projectPlanData
+                teamMembers
             };
 
-            window.location.hash = encodeURIComponent(JSON.stringify(hashData));
-            updateQRCode(); // Update QR code with new URL
+            // Only include projectPlan if it exists and has timeline data
+            if (window.projectPlanData && window.projectPlanData.timeline && window.projectPlanData.timeline.length > 0) {
+                data.projectPlan = window.projectPlanData;
+            }
+
+            try {
+                const hashString = btoa(JSON.stringify(data));
+                window.location.hash = hashString;
+                updateQRCode();
+            } catch (error) {
+                console.error('Error updating URL hash:', error);
+            }
         }
     </script>
 
