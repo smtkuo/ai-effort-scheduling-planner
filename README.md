@@ -1,6 +1,6 @@
 # AI Effort Planning System
 
-![AI Effort Planning System](https://raw.githubusercontent.com/samet-utku-olgun/ai-effort-planning-system/main/preview.png)
+![AI Effort Planning System](preview.png)
 
 ## Overview
 AI Effort Planning System is a modern web application that helps project managers and team leaders create detailed project plans with cost estimations using artificial intelligence. The system considers individual team member rates, working hours, and different currencies to provide comprehensive project planning and cost analysis.
