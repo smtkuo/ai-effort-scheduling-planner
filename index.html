@@ -556,51 +556,47 @@
                                             </button>
                                         </div>
 
-                                                        <!-- Task Details -->
-                                                        <div class="space-y-3 mt-2">
-                                                            <textarea 
-                                                                class="textarea textarea-bordered textarea-sm w-full bg-base-100" 
-                                                                rows="2"
-                                                                onchange="updateTaskDescription('${task.id}', this.value)"
-                                                                placeholder="Task description">${task.description || ''}</textarea>
+                                        <!-- Task Details -->
+                                        <div class="space-y-3 mt-2">
+                                            <textarea 
+                                                class="textarea textarea-bordered textarea-sm w-full bg-base-100" 
+                                                rows="2"
+                                                onchange="updateTaskDescription('${task.id}', this.value)"
+                                                placeholder="Task description">${task.description || ''}</textarea>
 
-                                                            <div class="grid grid-cols-1 gap-2">
-                                                                <select 
-                                                                    class="select select-sm select-bordered w-full bg-base-100" 
-                                                                    onchange="updateTaskAssignee('${task.id}', this.value)">
-                                                                    <option value="">👤 Assign to</option>
-                                                                    ${getTeamMemberOptions(task.assignedTo)}
-                                                                </select>
+                                            <div class="grid grid-cols-1 gap-2">
+                                                <select 
+                                                    class="select select-sm select-bordered w-full bg-base-100" 
+                                                    onchange="updateTaskAssignee('${task.id}', this.value)">
+                                                    <option value="">👤 Assign to</option>
+                                                    ${getTeamMemberOptions(task.assignedTo)}
+                                                </select>
 
-                                                                <div class="join w-full">
-                                                                    <input 
-                                                                        type="number" 
-                                                                        class="input input-sm input-bordered join-item w-full bg-base-100" 
-                                                                        value="${task.estimatedHours || ''}"
-                                                                        onchange="updateTaskHours('${task.id}', this.value)"
-                                                                        placeholder="Hours">
-                                                                    <span class="btn btn-sm join-item no-animation bg-base-100">h</span>
-                                                                </div>
-                                                            </div>
-
-                                                            ${calculateAndDisplayCost(task)}
-                                                        </div>
-                                                    </div>
+                                                <div class="join w-full">
+                                                    <input 
+                                                        type="number" 
+                                                        class="input input-sm input-bordered join-item w-full bg-base-100" 
+                                                        value="${task.estimatedHours || ''}"
+                                                        onchange="updateTaskHours('${task.id}', this.value)"
+                                                        placeholder="Hours">
+                                                    <span class="btn btn-sm join-item no-animation bg-base-100">h</span>
                                                 </div>
-                                            `).join('')}
-                                            ${day.tasks.length === 0 ? `
-                                                <div class="text-center py-4 text-base-content/50">
-                                                    <p class="text-sm">No tasks yet</p>
-                                                    <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
-                                                        class="btn btn-ghost btn-sm mt-2">
-                                                        Add Task
-                                                    </button>
-                                                </div>
-                                            ` : ''}
+                                            </div>
+
+                                            ${calculateAndDisplayCost(task)}
                                         </div>
                                     </div>
                                 </div>
                             `).join('')}
+                            ${day.tasks.length === 0 ? `
+                                <div class="text-center py-4 text-base-content/50">
+                                    <p class="text-sm">No tasks yet</p>
+                                    <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
+                                        class="btn btn-ghost btn-sm mt-2">
+                                        Add Task
+                                    </button>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -789,86 +785,97 @@ Project Description: ${projectDescription}
 Team Members: ${teamMembersString}
 Daily Maximum Working Hours per Team Member: ${maxDailyHours} hours
 
-Please analyze the project description carefully and create a comprehensive task list following these guidelines:
+Please analyze the project description and create a comprehensive task list following these guidelines:
 
 1. Project Analysis & Planning Phase:
-   - Analyze the project requirements in detail
-   - Break down the project description into specific features and components
-   - Identify all technical requirements and dependencies
-   - Create a detailed system architecture plan
-   - Define database schema and data models if required
-   - Plan API endpoints and integrations if needed
-   - Document all third-party services and dependencies
-   - Create detailed UI/UX wireframes if applicable
+   - Analyze the project requirements from the description
+   - Break down the main features and functionalities
+   - Identify system architecture requirements
+   - List all required technologies and tools
+   - Define project scope and boundaries
+   - Create database schema (if required)
+   - Plan API endpoints (if required)
+   - Define UI/UX requirements (if applicable)
 
 2. Development Environment Setup:
-   - List all required development tools and technologies
-   - Specify version control system setup
-   - Define branching strategy and workflow
-   - Set up development, staging, and production environments
-   - Configure CI/CD pipelines if needed
-   - Set up monitoring and logging systems
-   - Configure backup and recovery systems
+   - Create detailed tasks for setting up:
+     * Version control system
+     * Development environment
+     * Testing environment
+     * Continuous Integration setup
+     * Required frameworks and libraries
+     * Database setup
+     * API testing tools
+     * Code quality tools
 
-3. Feature Development Breakdown:
+3. Core Feature Development:
    For each feature mentioned in the project description:
-   - Create detailed technical specifications
-   - Break down into smaller, manageable tasks
-   - Identify dependencies between tasks
-   - Specify required APIs and integrations
-   - Define data models and database changes
-   - List UI components needed
-   - Specify validation and error handling requirements
-   - Define success criteria and acceptance tests
+   - Create setup tasks
+   - List database model creation tasks
+   - Include API endpoint development
+   - Add service layer implementation
+   - Include unit test creation
+   - Add integration test tasks
+   - Create documentation tasks
 
-4. Quality Assurance Planning:
-   For each feature and component:
-   - Create unit test specifications
-   - Define integration test scenarios
-   - Plan end-to-end test cases
-   - Specify performance testing requirements
-   - Define security testing scope
-   - Create user acceptance test plans
-   - Plan load and stress testing if needed
+4. Frontend Development (if applicable):
+   Based on UI/UX requirements:
+   - Component structure setup
+   - State management implementation
+   - API integration tasks
+   - Responsive design implementation
+   - User interaction features
+   - Component testing tasks
+   - Browser compatibility testing
 
-5. Task Details Requirements:
-   Each task must include:
-   - Specific and descriptive title based on the project requirements
-   - Detailed technical description including:
-     * Implementation approach
-     * Required technologies
-     * Expected challenges
-     * Security considerations
-     * Performance requirements
-   - Assigned team member based on expertise and task requirements
-   - Realistic time estimation (within ${maxDailyHours} hours per day limit)
-   - Priority level (High/Medium/Low) based on dependencies
-   - Clear definition of done
-   - Expected deliverables
-   - Cost calculation based on assigned member's rate
+5. Testing & Quality Assurance:
+   Create specific tasks for:
+   - Unit testing each component
+   - Integration testing
+   - End-to-end testing
+   - Performance testing
+   - Security testing
+   - Cross-browser testing
+   - Mobile responsiveness testing
 
-6. Documentation Requirements:
-   Plan documentation tasks for:
-   - Technical architecture
-   - API specifications
-   - Database schema
-   - Setup instructions
-   - Deployment procedures
-   - User guides
-   - Troubleshooting guides
-   - Security protocols
-   - Maintenance procedures
+6. Deployment & Documentation:
+   - Deployment preparation tasks
+   - Server configuration
+   - CI/CD pipeline setup
+   - User documentation
+   - API documentation
+   - System architecture documentation
+   - Maintenance guidelines
+
+For each task, provide:
+- Clear title describing the specific development step
+- Detailed technical description including acceptance criteria
+- Required technical skills
+- Assigned team member based on expertise
+- Estimated hours (within daily ${maxDailyHours}-hour limit)
+- Priority level (High/Medium/Low)
+- Technical dependencies and prerequisites
+- Expected deliverables
+- Cost calculation based on member's hourly rate
+
+Task Organization Rules:
+1. Group related tasks together
+2. Order tasks based on dependencies
+3. Consider skill requirements for assignments
+4. Balance workload across team members
+5. Ensure knowledge sharing opportunities
+6. Maximum ${maxDailyHours} hours per person per day
+7. Include buffer time for unexpected issues
+8. Account for code review and testing time
 
 Please create a detailed development plan that:
-1. Directly addresses all requirements mentioned in the project description
-2. Creates specific tasks for each feature and component
-3. Follows a logical development progression
-4. Includes all necessary setup and configuration steps
-5. Ensures proper testing and quality assurance
-6. Maintains clear technical dependencies
-7. Provides realistic time and cost estimates
-
-The tasks should be specific to the project description and avoid generic placeholders. Each task should contribute directly to the project's requirements and features.`,
+- Is specifically tailored to the project description
+- Includes all necessary technical tasks
+- Follows best practices for the required technologies
+- Ensures proper testing and documentation
+- Maintains clear technical dependencies
+- Provides accurate time and cost estimates
+- Considers team member expertise for assignments`,
                 responseType: {
                     format: 'json',
                     structure: {
@@ -891,20 +898,14 @@ The tasks should be specific to the project description and avoid generic placeh
                                             id: 'string',
                                             title: 'string',
                                             description: 'string',
-                                            technicalDetails: {
-                                                approach: 'string',
-                                                technologies: ['string'],
-                                                challenges: ['string'],
-                                                securityConsiderations: ['string'],
-                                                performanceRequirements: ['string']
-                                            },
+                                            technicalRequirements: ['string'],
                                             assignedTo: 'string',
                                             estimatedHours: 'number',
                                             priority: 'string',
                                             complexity: 'string',
                                             dependencies: ['string'],
                                             deliverables: ['string'],
-                                            definitionOfDone: ['string'],
+                                            acceptanceCriteria: ['string'],
                                             cost: {
                                                 original: {
                                                     amount: 'number',
