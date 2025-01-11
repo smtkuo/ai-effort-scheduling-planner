@@ -786,61 +786,89 @@ Team Members: ${teamMembersString}
 Daily Maximum Working Hours per Team Member: ${maxDailyHours} hours
 
 Analysis Requirements:
-1. Analyze the project complexity and scope to determine:
-   - Total number of weeks required for completion
-   - Major project phases and milestones
-   - Resource allocation strategy
-   - Risk factors and mitigation plans
+1. Project Requirements Analysis:
+   - Break down the project into core functional requirements
+   - Identify technical requirements and dependencies
+   - List infrastructure and setup requirements
+   - Define quality and testing requirements
+   - Document integration requirements
 
-2. Project Timeline Structure:
-   - Break down the project into the necessary number of weeks based on scope
-   - Each week must include detailed plans for all 7 days (Monday through Sunday)
-   - Consider weekends for flexible tasks or buffer time
-   - Ensure logical progression of tasks across weeks
+2. Development Phases:
+   - Initial Setup and Environment Configuration
+   - Core Feature Development
+   - Integration and API Development
+   - User Interface Development
+   - Testing and Quality Assurance
+   - Deployment and Documentation
 
-3. Weekly Planning Requirements:
-   - Start each week with planning and review sessions
-   - Distribute work evenly across all 7 days
-   - For each day in every week:
-     * Assign specific tasks to team members
-     * Track daily working hours (maximum ${maxDailyHours} hours per person)
-     * Calculate daily costs per team member
-     * Monitor task dependencies and progress
+3. Task Creation Guidelines:
+   Each task should follow a logical development progression:
+   - Environment Setup & Configuration Tasks
+     * Development environment setup
+     * Version control setup
+     * Dependency management
+     * Initial project structure
+
+   - Core Development Tasks
+     * Database schema design and setup
+     * Core functionality implementation
+     * Business logic development
+     * API endpoint creation
+     * Service layer implementation
+
+   - Frontend Development Tasks
+     * UI component development
+     * State management implementation
+     * API integration
+     * Responsive design implementation
+     * User interaction features
+
+   - Testing Tasks
+     * Unit test implementation
+     * Integration test setup
+     * End-to-end test development
+     * Performance testing
+     * Security testing
+
+   - Documentation Tasks
+     * API documentation
+     * Setup instructions
+     * User guides
+     * Deployment documentation
 
 4. Task Details Requirements:
    - Each task must include:
-     * Clear title and detailed description
-     * Assigned team member (based on expertise and availability)
+     * Clear title describing the specific development step
+     * Detailed technical description
+     * Assigned team member based on expertise
      * Estimated hours (within daily ${maxDailyHours}-hour limit)
      * Priority level (High/Medium/Low)
-     * Complexity level (High/Medium/Low)
-     * Dependencies and prerequisites
+     * Technical dependencies and prerequisites
+     * Expected deliverables
      * Cost calculation based on member's hourly rate
 
-5. Resource Management:
-   - Ensure optimal distribution of tasks among team members
-   - Consider each member's:
-     * Hourly rate and currency
-     * Expertise and role
-     * Daily availability (maximum ${maxDailyHours} hours)
-   - Balance workload across the entire project duration
+5. Resource Allocation Strategy:
+   - Assign tasks based on technical expertise
+   - Consider skill requirements for each phase
+   - Ensure knowledge sharing opportunities
+   - Balance workload across team members
+   - Maximum ${maxDailyHours} hours per person per day
 
-6. Cost Tracking:
-   - Calculate and track:
-     * Daily costs per team member
-     * Weekly totals per currency
-     * Running total project cost
-     * Cost projections and estimates
-   - Convert all costs to USD equivalent
-   - Provide cost breakdown by week and phase
+6. Progress Tracking:
+   - Track completion of requirements
+   - Monitor technical dependencies
+   - Calculate daily and weekly progress
+   - Track costs in original currencies and USD
+   - Monitor development milestones
 
-Please analyze the project requirements carefully and determine the appropriate number of weeks needed. Structure the response in the specified JSON format, ensuring:
-- Complete 7-day planning for each week
-- Realistic task distribution and timing
-- Accurate cost calculations in original currencies and USD
-- No team member exceeds ${maxDailyHours} hours per day
-- Clear progression of tasks and dependencies
-- Balanced workload across the project duration`,
+Please create a detailed development plan that:
+- Follows a logical progression of software development
+- Includes all necessary setup and configuration steps
+- Covers core feature development systematically
+- Includes proper testing and documentation tasks
+- Ensures quality through the development process
+- Maintains clear technical dependencies
+- Provides accurate time and cost estimates`,
                 responseType: {
                     format: 'json',
                     structure: {
@@ -868,6 +896,7 @@ Please analyze the project requirements carefully and determine the appropriate 
                                             priority: 'string',
                                             complexity: 'string',
                                             dependencies: ['string'],
+                                            deliverables: ['string'],
                                             cost: {
                                                 original: {
                                                     amount: 'number',
