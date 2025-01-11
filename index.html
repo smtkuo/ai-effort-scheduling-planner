@@ -74,6 +74,26 @@
                         </label>
                         <textarea id="projectDescription" class="textarea textarea-bordered h-24 sm:h-32 text-sm sm:text-base" placeholder="Enter detailed project description"></textarea>
                     </div>
+
+                    <!-- Add Daily Maximum Working Hours Input -->
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text">Daily Maximum Working Hours</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="maxDailyHours" 
+                            class="input input-bordered" 
+                            placeholder="8" 
+                            min="1" 
+                            max="24" 
+                            value="${decodedData?.maxDailyHours || '8'}" 
+                            oninput="updateUrlHash()"
+                        >
+                        <label class="label">
+                            <span class="label-text-alt">Maximum hours a team member can work per day</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -144,7 +164,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 
     <script>
-        // Get API key and team members from URL hash if present
+        // Initialize empty project plan at the top level
+        window.projectPlanData = {
+            timeline: {
+                weeks: []
+            }
+        };
+
+        // Update window.onload to show timeline immediately
         window.onload = function() {
             try {
                 const hash = window.location.hash.substring(1);
@@ -161,62 +188,433 @@
                         document.documentElement.lang = decodedData.projectLanguage;
                     }
                     if (decodedData.teamMembers && Array.isArray(decodedData.teamMembers)) {
-                        // Clear existing team members
                         document.getElementById('teamMembers').innerHTML = '';
-                        // Add team members from URL
                         decodedData.teamMembers.forEach(member => {
                             addTeamMember(member);
                         });
                     } else {
-                        // Add initial team member if no data in URL
                         addTeamMember();
                     }
+                    // Load project plan data if exists
+                    if (decodedData.projectPlan) {
+                        window.projectPlanData = decodedData.projectPlan;
+                    }
                 } else {
-                    // Add initial team member if no hash
                     addTeamMember();
                 }
             } catch (error) {
                 console.error('Error parsing URL data:', error);
                 addTeamMember();
             }
+            // Always display timeline, even if empty
+            displayResults(window.projectPlanData);
         }
 
-        // Update URL hash function to include language
-        function updateUrlHash() {
-            const apiKey = document.getElementById('apiKey').value;
-            const projectDescription = document.getElementById('projectDescription').value;
-            const projectLanguage = document.getElementById('projectLanguage').value;
-            const teamMembers = [];
-            
-            document.querySelectorAll('#teamMembers .card').forEach(card => {
-                const nameInput = card.querySelector('input[placeholder="Team Member Name"]');
-                const rateInput = card.querySelector('input[placeholder="0.00"]');
-                const hoursInput = card.querySelector('input[placeholder="0"]');
-                const currencySelect = card.querySelector('select');
+        function displayResults(plan) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="flex flex-col gap-6 w-full max-w-5xl mx-auto">
+                    <!-- Project Timeline Header -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-base-200 p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="badge badge-primary p-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg sm:text-xl font-bold">Project Timeline</h3>
+                        </div>
+                        <button onclick="addNewWeek()" class="btn btn-primary w-full sm:w-auto gap-2 normal-case">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add Week
+                        </button>
+                    </div>
 
-                if (nameInput.value || rateInput.value) {
-                    teamMembers.push({
-                        name: nameInput.value,
-                        rate: rateInput.value,
-                        dailyHours: hoursInput.value,
-                        currency: currencySelect.value
-                    });
+                    <!-- Weeks Container -->
+                    <div class="space-y-6 overflow-x-auto" id="weeksContainer">
+                        ${generateWeeksHTML(plan)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateWeeksHTML(plan) {
+            if (!plan || !plan.timeline || !plan.timeline.weeks || plan.timeline.weeks.length === 0) {
+                return `
+                    <div class="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="card-body items-center text-center py-12">
+                            <div class="text-6xl mb-4">📅</div>
+                            <h3 class="text-xl font-bold mb-2">Start Your Project Timeline</h3>
+                            <p class="text-base-content/70 mb-6">Add your first week to begin planning your project</p>
+                            <button onclick="addNewWeek()" class="btn btn-primary btn-lg gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Add First Week
+                            </button>
+                        </div>
+                    </div>`;
+            }
+
+            let totalCosts = {};
+            const weeksHTML = plan.timeline.weeks.map((week, weekIndex) => {
+                const weekCosts = calculateWeekCosts(week);
+                
+                // Add to total costs
+                Object.entries(weekCosts).forEach(([currency, amount]) => {
+                    if (!totalCosts[currency]) {
+                        totalCosts[currency] = 0;
+                    }
+                    totalCosts[currency] += amount;
+                });
+
+                return `
+                <div class="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div class="card-body p-4">
+                        <!-- Week Header -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="badge badge-primary badge-lg">${week.weekNumber}</div>
+                                <h4 class="text-lg font-bold">Week ${week.weekNumber}</h4>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-2 items-end sm:items-center w-full sm:w-auto">
+                                <!-- Week Cost Display -->
+                                <div class="flex gap-2 items-center">
+                                    <span class="text-sm opacity-70">Week Total:</span>
+                                    <div class="font-mono text-sm">
+                                        ${Object.entries(weekCosts).map(([currency, amount]) => `
+                                            <span class="badge ${currency === 'USD' ? 'badge-ghost' : 'badge-primary'} badge-sm ml-1">
+                                                ${formatCurrency(amount, currency)}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <button onclick="deleteWeek(${weekIndex})" class="btn btn-error btn-sm gap-2 w-full sm:w-auto">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete Week
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Days Grid -->
+                        <div class="grid grid-cols-1 gap-4">
+                            ${week.days.map((day, dayIndex) => `
+                                <div class="card bg-base-100 shadow hover:shadow-md transition-all duration-300">
+                                    <div class="card-body p-4">
+                                        <!-- Day Header -->
+                                        <div class="flex justify-between items-center mb-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="badge badge-primary">${dayIndex + 1}</div>
+                                                <h5 class="font-semibold">Day ${dayIndex + 1}</h5>
+                                            </div>
+                                            <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
+                                                class="btn btn-ghost btn-sm btn-square hover:bg-base-200">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Tasks List -->
+                                        <div class="space-y-3">
+                                            ${(day.tasks || []).map((task, taskIndex) => `
+                                                <div class="card bg-base-200 hover:bg-base-300 transition-colors duration-200">
+                                                    <div class="card-body p-3">
+                                                        <!-- Task Header -->
+                                                        <div class="flex justify-between items-start gap-2">
+                                                            <input type="text" 
+                                                                class="input input-sm input-ghost w-full font-medium" 
+                                                                value="${task.title || ''}"
+                                                                onchange="updateTaskTitle('${task.id}', this.value)"
+                                                                placeholder="Task title">
+                                                            <button onclick="deleteTask(${weekIndex}, ${dayIndex}, ${taskIndex})" 
+                                                                class="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- Task Details -->
+                                                        <div class="space-y-3 mt-2">
+                                                            <textarea 
+                                                                class="textarea textarea-bordered textarea-sm w-full bg-base-100" 
+                                                                rows="2"
+                                                                onchange="updateTaskDescription('${task.id}', this.value)"
+                                                                placeholder="Task description">${task.description || ''}</textarea>
+
+                                                            <div class="grid grid-cols-1 gap-2">
+                                                                <select 
+                                                                    class="select select-sm select-bordered w-full bg-base-100" 
+                                                                    onchange="updateTaskAssignee('${task.id}', this.value)">
+                                                                    <option value="">👤 Assign to</option>
+                                                                    ${getTeamMemberOptions(task.assignedTo)}
+                                                                </select>
+
+                                                                <div class="join w-full">
+                                                                    <input 
+                                                                        type="number" 
+                                                                        class="input input-sm input-bordered join-item w-full bg-base-100" 
+                                                                        value="${task.estimatedHours || ''}"
+                                                                        onchange="updateTaskHours('${task.id}', this.value)"
+                                                                        placeholder="Hours">
+                                                                    <span class="btn btn-sm join-item no-animation bg-base-100">h</span>
+                                                                </div>
+                                                            </div>
+
+                                                            ${calculateAndDisplayCost(task)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                            ${day.tasks.length === 0 ? `
+                                                <div class="text-center py-4 text-base-content/50">
+                                                    <p class="text-sm">No tasks yet</p>
+                                                    <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
+                                                        class="btn btn-ghost btn-sm mt-2">
+                                                        Add Task
+                                                    </button>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            // Add total costs section
+            const totalCostsHTML = `
+                <div class="card bg-primary text-primary-content shadow-lg hover:shadow-xl transition-all duration-300 mt-6">
+                    <div class="card-body p-4">
+                        <h3 class="card-title">Total Project Cost</h3>
+                        <div class="flex flex-wrap gap-3 items-center">
+                            ${Object.entries(totalCosts).map(([currency, amount]) => `
+                                <div class="stat bg-primary-focus rounded-box p-3">
+                                    <div class="stat-title text-primary-content/70">Total in ${currency}</div>
+                                    <div class="stat-value text-2xl">${formatCurrency(amount, currency)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return weeksHTML + totalCostsHTML;
+        }
+
+        function calculateAndDisplayCost(task) {
+            if (!task.assignedTo || !task.estimatedHours) {
+                task.cost = null;
+                return '';
+            }
+
+            const teamMember = findTeamMember(task.assignedTo);
+            if (!teamMember) {
+                task.cost = null;
+                return '';
+            }
+
+            const rate = parseFloat(teamMember.rate) || 0;
+            const hours = parseFloat(task.estimatedHours) || 0;
+            const cost = parseFloat((rate * hours).toFixed(2));
+            const usdCost = parseFloat(convertToUSD(cost, teamMember.currency).toFixed(2));
+
+            // Save cost information in task object
+            task.cost = {
+                original: { 
+                    amount: cost,
+                    currency: teamMember.currency
+                },
+                usd: { 
+                    amount: usdCost,
+                    currency: 'USD'
+                },
+                hourlyRate: rate,
+                hours: hours
+            };
+
+            return `
+                <div class="mt-3 flex justify-between items-center">
+                    <span class="badge badge-ghost gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Task Cost (${hours}h × ${formatCurrency(rate, teamMember.currency)}/h)
+                    </span>
+                    <div class="font-mono text-sm">
+                        <span class="badge badge-primary badge-sm">
+                            ${formatCurrency(cost, teamMember.currency)}
+                        </span>
+                        ${teamMember.currency !== 'USD' ? `
+                            <span class="badge badge-ghost badge-sm ml-1">
+                                ${formatCurrency(usdCost, 'USD')}
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function calculateDayCosts(day) {
+            let dayCosts = {};
+            
+            (day.tasks || []).forEach(task => {
+                if (task.cost) {
+                    const currency = task.cost.original.currency;
+                    const cost = task.cost.original.amount;
+                    const usdCost = task.cost.usd.amount;
+
+                    // Sum original currency costs
+                    if (!dayCosts[currency]) {
+                        dayCosts[currency] = 0;
+                    }
+                    dayCosts[currency] = parseFloat((dayCosts[currency] + cost).toFixed(2));
+
+                    // Sum USD costs if different currency
+                    if (currency !== 'USD') {
+                        if (!dayCosts['USD']) {
+                            dayCosts['USD'] = 0;
+                        }
+                        dayCosts['USD'] = parseFloat((dayCosts['USD'] + usdCost).toFixed(2));
+                    }
                 }
             });
 
-            const hashData = {
-                apiKey: apiKey,
-                projectDescription: projectDescription,
-                projectLanguage: projectLanguage,
-                teamMembers: teamMembers
-            };
-
-            window.location.hash = encodeURIComponent(JSON.stringify(hashData));
+            return dayCosts;
         }
 
-        // Add event listeners for all inputs that should trigger hash updates
-        document.getElementById('apiKey').addEventListener('input', updateUrlHash);
-        document.getElementById('projectDescription').addEventListener('input', updateUrlHash);
+        function calculateWeekCosts(week) {
+            let weekCosts = {};
+            
+            week.days.forEach(day => {
+                const dayCosts = calculateDayCosts(day);
+                Object.entries(dayCosts).forEach(([currency, amount]) => {
+                    if (!weekCosts[currency]) {
+                        weekCosts[currency] = 0;
+                    }
+                    weekCosts[currency] = parseFloat((weekCosts[currency] + amount).toFixed(2));
+                });
+            });
+
+            return weekCosts;
+        }
+
+        function generateDayHTML(day, weekIndex, dayIndex) {
+            const dayCosts = calculateDayCosts(day);
+            
+            return `
+                <div class="card bg-base-100 shadow hover:shadow-md transition-all duration-300">
+                    <div class="card-body p-4">
+                        <!-- Day Header -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="badge badge-primary">${dayIndex + 1}</div>
+                                <h5 class="font-semibold">Day ${dayIndex + 1}</h5>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <span class="text-sm opacity-70">Day Total:</span>
+                                <div class="font-mono text-sm">
+                                    ${Object.entries(dayCosts).map(([currency, amount]) => `
+                                        <span class="badge ${currency === 'USD' ? 'badge-ghost' : 'badge-primary'} badge-sm ml-1">
+                                            ${formatCurrency(amount, currency)}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
+                                class="btn btn-ghost btn-sm btn-square hover:bg-base-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Tasks List -->
+                        <div class="space-y-3">
+                            ${(day.tasks || []).map((task, taskIndex) => `
+                                <div class="card bg-base-200 hover:bg-base-300 transition-colors duration-200">
+                                    <div class="card-body p-3">
+                                        <!-- Task Header -->
+                                        <div class="flex justify-between items-start gap-2">
+                                            <input type="text" 
+                                                class="input input-sm input-ghost w-full font-medium" 
+                                                value="${task.title || ''}"
+                                                onchange="updateTaskTitle('${task.id}', this.value)"
+                                                placeholder="Task title">
+                                            <button onclick="deleteTask(${weekIndex}, ${dayIndex}, ${taskIndex})" 
+                                                class="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Task Details -->
+                                        <div class="space-y-3 mt-2">
+                                            <textarea 
+                                                class="textarea textarea-bordered textarea-sm w-full bg-base-100" 
+                                                rows="2"
+                                                onchange="updateTaskDescription('${task.id}', this.value)"
+                                                placeholder="Task description">${task.description || ''}</textarea>
+
+                                            <div class="grid grid-cols-1 gap-2">
+                                                <select 
+                                                    class="select select-sm select-bordered w-full bg-base-100" 
+                                                    onchange="updateTaskAssignee('${task.id}', this.value)">
+                                                    <option value="">👤 Assign to</option>
+                                                    ${getTeamMemberOptions(task.assignedTo)}
+                                                </select>
+
+                                                <div class="join w-full">
+                                                    <input 
+                                                        type="number" 
+                                                        class="input input-sm input-bordered join-item w-full bg-base-100" 
+                                                        value="${task.estimatedHours || ''}"
+                                                        onchange="updateTaskHours('${task.id}', this.value)"
+                                                        placeholder="Hours">
+                                                    <span class="btn btn-sm join-item no-animation bg-base-100">h</span>
+                                                </div>
+                                            </div>
+
+                                            ${calculateAndDisplayCost(task)}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${day.tasks.length === 0 ? `
+                                <div class="text-center py-4 text-base-content/50">
+                                    <p class="text-sm">No tasks yet</p>
+                                    <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
+                                        class="btn btn-ghost btn-sm mt-2">
+                                        Add Task
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function findTeamMember(name) {
+            const memberCard = Array.from(document.querySelectorAll('#teamMembers .card'))
+                .find(card => card.querySelector('input[placeholder="Team Member Name"]').value === name);
+            
+            if (memberCard) {
+                return {
+                    rate: memberCard.querySelector('input[placeholder="0.00"]').value,
+                    currency: memberCard.querySelector('select').value
+                };
+            }
+            return null;
+        }
 
         // Team member management
         function addTeamMember(memberData = null) {
@@ -242,7 +640,7 @@
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                    <div class="grid grid-cols-1 mt-4">
                         <!-- Hourly Rate Section -->
                         <div class="form-control">
                             <label class="label">
@@ -266,43 +664,13 @@
                                 <span class="label-text-alt text-success font-mono opacity-75"></span>
                             </label>
                         </div>
-
-                        <!-- Daily Hours Section -->
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text font-medium text-base-content/80">Daily Hours</span>
-                            </label>
-                            <div class="join w-full shadow-sm">
-                                <input type="number" 
-                                    class="input input-bordered join-item w-full text-right focus:z-10" 
-                                    placeholder="0" 
-                                    value="${memberData?.dailyHours || '8'}" 
-                                    min="1" 
-                                    max="24" 
-                                    oninput="updateUrlHash()"
-                                >
-                                <span class="join-item btn no-animation bg-base-100 border-base-300">hrs</span>
-                            </div>
-                        </div>
-
-                        <!-- Weekly Cost Section -->
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text font-medium text-base-content/80">Weekly Cost</span>
-                            </label>
-                            <div class="bg-base-200/50 rounded-lg p-4 text-right font-mono text-lg font-semibold shadow-inner">
-                                <span class="weekly-cost">-</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             `;
 
             // Add event listeners
             const rateInput = memberDiv.querySelector('input[type="number"]:not([placeholder="0"])');
-            const hoursInput = memberDiv.querySelector('input[placeholder="0"]');
             const currencySelect = memberDiv.querySelector('select');
-            const weeklyDisplay = memberDiv.querySelector('.weekly-cost');
             const usdConversionSpan = memberDiv.querySelector('.label-text-alt.text-success');
 
             function updateUSDConversion() {
@@ -310,42 +678,26 @@
                 const currency = currencySelect.value;
                 if (rate && currency !== 'USD') {
                     const usdRate = convertToUSD(rate, currency);
-                    usdConversionSpan.textContent = `≈ $${usdRate} USD/hour`;
-                } else {
-                    usdConversionSpan.textContent = '';
-                }
-            }
-
-            function updateWeeklyCost() {
-                const rate = parseFloat(rateInput.value) || 0;
-                const hours = parseFloat(hoursInput.value) || 0;
-                const currency = currencySelect.value;
-                const weeklyAmount = rate * hours * 5; // 5 working days
-                weeklyDisplay.textContent = formatCurrency(weeklyAmount, currency);
-
-                // Show USD conversion if currency is not USD
-                if (currency !== 'USD' && rate > 0) {
-                    const weeklyAmountUSD = convertToUSD(weeklyAmount, currency);
-                    weeklyDisplay.textContent += ` (${formatCurrency(weeklyAmountUSD, 'USD')})`;
-                }
-
-                // Show hourly rate in USD if currency is not USD
-                if (currency !== 'USD' && rate > 0) {
-                    const usdRate = convertToUSD(rate, currency);
                     usdConversionSpan.textContent = `≈ ${formatCurrency(usdRate, 'USD')}/hour`;
                 } else {
                     usdConversionSpan.textContent = '';
                 }
             }
 
-            rateInput.addEventListener('input', updateWeeklyCost);
-            hoursInput.addEventListener('input', updateWeeklyCost);
-            currencySelect.addEventListener('change', updateWeeklyCost);
+            rateInput.addEventListener('input', updateUSDConversion);
+            currencySelect.addEventListener('change', updateUSDConversion);
 
             // Initial update
-            updateWeeklyCost();
+            updateUSDConversion();
 
+            addTeamMemberChangeListener(memberDiv);
             teamMembersDiv.appendChild(memberDiv);
+            
+            // Update all task assignee dropdowns
+            document.querySelectorAll('select[onchange^="updateTaskAssignee"]').forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = getTeamMemberOptions(currentValue);
+            });
         }
 
         // Currency conversion rates (you should update these with real-time rates)
@@ -365,11 +717,26 @@
         };
 
         function convertToUSD(amount, fromCurrency) {
-            return (amount * conversionRates[fromCurrency]).toFixed(2);
+            if (fromCurrency === 'USD') return amount;
+            
+            const conversionRates = {
+                'EUR': 1/0.9709,
+                'GBP': 1/0.8124,
+                'TRY': 1/35.3269
+            };
+
+            const rate = conversionRates[fromCurrency] || 1;
+            return parseFloat((amount * rate).toFixed(2));
         }
 
         function formatCurrency(amount, currency) {
-            return `${currencySymbols[currency]}${parseFloat(amount).toFixed(2)}`;
+            const formatter = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            return formatter.format(amount);
         }
 
         // Generate plan function
@@ -386,124 +753,217 @@
                 <div class="flex flex-col items-center justify-center p-8">
                     <span class="loading loading-spinner loading-lg text-primary"></span>
                     <p class="mt-4 text-lg font-semibold text-primary/80">Analyzing and Generating Plan...</p>
+                    <p class="mt-2 text-sm text-base-content/60">This may take up to 3 minutes...</p>
                 </div>
             `;
 
+            // Get team members with their rates and currencies
+            const teamMembers = Array.from(document.querySelectorAll('#teamMembers .card')).map(card => ({
+                name: card.querySelector('input[placeholder="Team Member Name"]').value,
+                rate: parseFloat(card.querySelector('input[placeholder="0.00"]').value) || 0,
+                currency: card.querySelector('select').value
+            })).filter(member => member.name && member.rate > 0);
+
+            if (teamMembers.length === 0) {
+                alert('Please add at least one team member with a valid hourly rate');
+                return;
+            }
+
+            const maxDailyHours = parseInt(document.getElementById('maxDailyHours').value) || 8;
             const projectDescription = document.getElementById('projectDescription').value;
             const projectLanguage = document.getElementById('projectLanguage').value;
-            
-            // Collect team members data with currency
-            const teamMembers = [];
-            document.querySelectorAll('#teamMembers .card').forEach(card => {
-                const nameInput = card.querySelector('input[placeholder="Team Member Name"]');
-                const rateInput = card.querySelector('input[placeholder="0.00"]');
-                const hoursInput = card.querySelector('input[placeholder="0"]');
-                const currencySelect = card.querySelector('select');
-                
-                const currency = currencySelect.value;
-                const hourlyRate = rateInput.value;
-                const dailyHours = hoursInput.value;
-                
-                if (nameInput.value || hourlyRate) {
-                    teamMembers.push({
-                        name: nameInput.value,
-                        hourlyRate: hourlyRate,
-                        dailyHours: dailyHours,
-                        currency: currency,
-                        hourlyRateUSD: convertToUSD(hourlyRate, currency)
-                    });
-                }
-            });
+
+            // Create team members string for prompt
+            const teamMembersString = teamMembers.map(member => 
+                `${member.name} (${currencySymbols[member.currency]}${member.rate}/hour in ${member.currency})`
+            ).join(', ');
 
             const data = JSON.stringify({
-                prompt: `Create a detailed project plan with weekly cost breakdown for the following project:
+                prompt: `Create a detailed project plan based on the following information:
 
-Project Description (${projectLanguage.toUpperCase()}):
-${projectDescription}
+Project Description: ${projectDescription}
+Team Members: ${teamMembersString}
+Daily Maximum Working Hours per Team Member: ${maxDailyHours} hours
 
-Team Members Information:
-${teamMembers.map(member => `
-- ${member.name}:
-  • Hourly Rate: ${formatCurrency(member.hourlyRate, member.currency)}
-  • Working Hours: ${member.dailyHours} hours/day
-  • Weekly Hours: ${member.dailyHours * 5} hours/week
-  • Weekly Cost: ${formatCurrency(member.hourlyRate * member.dailyHours * 5, member.currency)}
-  • USD Equivalent: ${formatCurrency(convertToUSD(member.hourlyRate * member.dailyHours * 5, member.currency), 'USD')}`).join('\n')}
+Analysis Requirements:
+1. Analyze the project complexity and scope to determine:
+   - Total number of weeks required for completion
+   - Major project phases and milestones
+   - Resource allocation strategy
+   - Risk factors and mitigation plans
 
-Requirements:
-1. Cost Calculations:
-   - Calculate costs in each member's original currency
-   - Show USD equivalent for comparison only
-   - Track weekly costs per member in their preferred currency
-   - Show phase totals in USD for project overview
+2. Project Timeline Structure:
+   - Break down the project into the necessary number of weeks based on scope
+   - Each week must include detailed plans for all 7 days (Monday through Sunday)
+   - Consider weekends for flexible tasks or buffer time
+   - Ensure logical progression of tasks across weeks
 
-2. Time Planning:
-   - Consider individual daily working hours
-   - Plan tasks according to available hours
-   - Optimize resource allocation
+3. Weekly Planning Requirements:
+   - Start each week with planning and review sessions
+   - Distribute work evenly across all 7 days
+   - For each day in every week:
+     * Assign specific tasks to team members
+     * Track daily working hours (maximum ${maxDailyHours} hours per person)
+     * Calculate daily costs per team member
+     * Monitor task dependencies and progress
 
-3. Breakdown Requirements:
-   - Show detailed weekly cost per member in their original currency
-   - Include USD equivalent for reference
-   - Display phase-wise progress
-   - Track individual contributions
+4. Task Details Requirements:
+   - Each task must include:
+     * Clear title and detailed description
+     * Assigned team member (based on expertise and availability)
+     * Estimated hours (within daily ${maxDailyHours}-hour limit)
+     * Priority level (High/Medium/Low)
+     * Complexity level (High/Medium/Low)
+     * Dependencies and prerequisites
+     * Cost calculation based on member's hourly rate
 
-4. Financial Reporting:
-   - Primary display in member's original currency
-   - Include USD equivalent for global overview
-   - Calculate weekly and phase-wise totals
-   - Provide cost efficiency recommendations`,
+5. Resource Management:
+   - Ensure optimal distribution of tasks among team members
+   - Consider each member's:
+     * Hourly rate and currency
+     * Expertise and role
+     * Daily availability (maximum ${maxDailyHours} hours)
+   - Balance workload across the entire project duration
+
+6. Cost Tracking:
+   - Calculate and track:
+     * Daily costs per team member
+     * Weekly totals per currency
+     * Running total project cost
+     * Cost projections and estimates
+   - Convert all costs to USD equivalent
+   - Provide cost breakdown by week and phase
+
+Please analyze the project requirements carefully and determine the appropriate number of weeks needed. Structure the response in the specified JSON format, ensuring:
+- Complete 7-day planning for each week
+- Realistic task distribution and timing
+- Accurate cost calculations in original currencies and USD
+- No team member exceeds ${maxDailyHours} hours per day
+- Clear progression of tasks and dependencies
+- Balanced workload across the project duration`,
                 responseType: {
                     format: 'json',
                     structure: {
                         projectPlan: {
                             summary: 'string',
+                            estimatedDuration: {
+                                totalWeeks: 'number',
+                                startDate: 'string',
+                                endDate: 'string',
+                                reasoning: 'string'
+                            },
                             timeline: {
-                                totalDuration: 'string',
-                                phases: [{
-                                    name: 'string',
-                                    duration: 'string',
-                                    tasks: ['string'],
-                                    assignedTeamMembers: ['string'],
-                                    weeklyBreakdown: [{
-                                        weekNumber: 'string',
-                                        costs: {
-                                            totalForWeek: 'string',
-                                            byMember: [{
-                                                name: 'string',
-                                                hours: 'string',
-                                                cost: 'string',
-                                                costOriginal: 'string',
+                                weeks: [{
+                                    weekNumber: 'number',
+                                    weekSummary: 'string',
+                                    days: [{
+                                        date: 'string',
+                                        dayOfWeek: 'string',
+                                        tasks: [{
+                                            id: 'string',
+                                            title: 'string',
+                                            description: 'string',
+                                            assignedTo: 'string',
+                                            estimatedHours: 'number',
+                                            priority: 'string',
+                                            complexity: 'string',
+                                            dependencies: ['string'],
+                                            cost: {
+                                                original: {
+                                                    amount: 'number',
+                                                    currency: 'string'
+                                                },
+                                                usd: {
+                                                    amount: 'number',
+                                                    currency: 'USD'
+                                                }
+                                            }
+                                        }],
+                                        dailyTotal: {
+                                            hours: 'number',
+                                            costs: [{
+                                                amount: 'number',
                                                 currency: 'string'
                                             }]
                                         }
-                                    }]
+                                    }],
+                                    weeklyTotal: {
+                                        hours: 'number',
+                                        costs: [{
+                                            amount: 'number',
+                                            currency: 'string'
+                                        }],
+                                        completionPercentage: 'number'
+                                    }
                                 }]
                             },
                             costs: {
-                                totalCost: 'string',
-                                weeklyAverage: 'string',
-                                breakdownByPhase: [{
-                                    phase: 'string',
-                                    cost: 'string',
-                                    weeklyPayments: ['string']
-                                }]
+                                totalProjectCost: {
+                                    amount: 'number',
+                                    currency: 'string'
+                                },
+                                weeklyAverage: {
+                                    amount: 'number',
+                                    currency: 'string'
+                                },
+                                costBreakdown: {
+                                    byTeamMember: [{
+                                        name: 'string',
+                                        totalHours: 'number',
+                                        totalCost: {
+                                            original: {
+                                                amount: 'number',
+                                                currency: 'string'
+                                            },
+                                            usd: {
+                                                amount: 'number',
+                                                currency: 'USD'
+                                            }
+                                        }
+                                    }]
+                                }
                             },
                             recommendations: ['string']
                         }
                     }
                 },
-                lang: projectLanguage.toUpperCase()
+                lang: projectLanguage
             });
 
+            // Make API request
             const xhr = new XMLHttpRequest();
             xhr.withCredentials = true;
+            xhr.timeout = 180000; // 3 minutes timeout
 
             xhr.addEventListener('readystatechange', function () {
                 if (this.readyState === this.DONE) {
-                    const response = JSON.parse(this.responseText);
-                    displayResults(response.result.response.projectPlan);
+                    try {
+                        if (this.status === 502) {
+                            resultsDiv.innerHTML = '<div class="alert alert-error">Server is temporarily unavailable. Please try again in a few moments.</div>';
+                            return;
+                        }
+                        
+                        const response = JSON.parse(this.responseText);
+                        if (response.result && response.result.response) {
+                            window.projectPlanData = response.result.response.projectPlan;
+                            displayResults(window.projectPlanData);
+                            updateUrlHash();
+                        } else {
+                            resultsDiv.innerHTML = '<div class="alert alert-error">Invalid response from API. Please try again.</div>';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing API response:', e);
+                        resultsDiv.innerHTML = '<div class="alert alert-error">Error communicating with the API. Please try again.</div>';
+                    }
                 }
+            });
+
+            xhr.addEventListener('timeout', function() {
+                resultsDiv.innerHTML = '<div class="alert alert-error">Request timed out after 3 minutes. Please try again.</div>';
+            });
+
+            xhr.addEventListener('error', function() {
+                resultsDiv.innerHTML = '<div class="alert alert-error">Network error occurred. Please check your connection and try again.</div>';
             });
 
             xhr.open('POST', 'https://generative-ai-api-openai-gpt-4o-api-ai-integration.p.rapidapi.com/generate?noqueue=1');
@@ -514,160 +974,107 @@ Requirements:
             xhr.send(data);
         }
 
-        function displayResults(projectPlan) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `
-                <div class="space-y-4 sm:space-y-6">
-                    <!-- Summary Card -->
-                    <div class="card bg-primary text-primary-content">
-                        <div class="card-body p-4 sm:p-6">
-                            <h3 class="card-title text-lg sm:text-2xl">Project Summary</h3>
-                            <p class="text-sm sm:text-base">${projectPlan.summary}</p>
-                        </div>
-                    </div>
+        function addNewWeek() {
+            if (!window.projectPlanData.timeline) {
+                window.projectPlanData.timeline = {
+                    weeks: []
+                };
+            }
 
-                    <!-- Timeline Card -->
-                    <div class="card bg-base-100 border-2 border-base-300">
-                        <div class="card-body p-4 sm:p-6">
-                            <h3 class="card-title text-lg sm:text-xl text-primary">Timeline Overview</h3>
-                            <div class="badge badge-secondary badge-lg text-xs sm:text-sm">Total Duration: ${projectPlan.timeline.totalDuration}</div>
-                            
-                            <div class="divider"></div>
-                            
-                            <!-- Phases Timeline -->
-                            <div class="space-y-4">
-                                ${projectPlan.timeline.phases.map((phase, index) => `
-                                    <div class="collapse collapse-arrow bg-base-200">
-                                        <input type="radio" name="phases-accordion" ${index === 0 ? 'checked' : ''} />
-                                        <div class="collapse-title text-base sm:text-xl font-medium flex items-center gap-2 flex-wrap">
-                                            <div class="badge badge-primary text-xs sm:text-sm">${phase.duration}</div>
-                                            ${phase.name}
-                                        </div>
-                                        <div class="collapse-content">
-                                            <div class="card bg-base-100 shadow-sm">
-                                                <div class="card-body p-2 sm:p-4">
-                                                    <div class="space-y-4">
-                                                        <div>
-                                                            <h4 class="font-semibold text-primary text-sm sm:text-base">Tasks:</h4>
-                                                            <ul class="list-disc list-inside space-y-1 mt-2 text-sm sm:text-base">
-                                                                ${phase.tasks.map(task => `<li>${task}</li>`).join('')}
-                                                            </ul>
-                                                        </div>
-                                                        <div>
-                                                            <h4 class="font-semibold text-primary text-sm sm:text-base">Team Members:</h4>
-                                                            <div class="flex flex-wrap gap-2 mt-2">
-                                                                ${phase.assignedTeamMembers.map(member => `
-                                                                    <div class="badge badge-outline text-xs sm:text-sm">${member}</div>
-                                                                `).join('')}
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <h4 class="font-semibold text-primary text-sm sm:text-base">Weekly Breakdown:</h4>
-                                                            <div class="overflow-x-auto -mx-4 sm:mx-0">
-                                                                <table class="table table-xs sm:table-sm">
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th>Week</th>
-                                                                            <th>Team Member</th>
-                                                                            <th>Hours</th>
-                                                                            <th>Cost (Original)</th>
-                                                                            <th>Cost</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody class="text-xs sm:text-sm">
-                                                                        ${phase.weeklyBreakdown.map(week => 
-                                                                            week.costs.byMember.map(member => `
-                                                                                <tr>
-                                                                                    <td>Week ${week.weekNumber}</td>
-                                                                                    <td>${member.name}</td>
-                                                                                    <td>${member.hours}</td>
-                                                                                    <td>${member.costOriginal}</td>
-                                                                                    <td>${member.cost}</td>
-                                                                                </tr>
-                                                                            `).join('')
-                                                                        ).join('')}
-                                                                    </tbody>
-                                                                    <tfoot class="text-xs sm:text-sm font-semibold">
-                                                                        ${phase.weeklyBreakdown.map(week => `
-                                                                            <tr>
-                                                                                <td>Week ${week.weekNumber} Total</td>
-                                                                                <td colspan="2"></td>
-                                                                                <td colspan="2">${week.costs.totalForWeek}</td>
-                                                                            </tr>
-                                                                        `).join('')}
-                                                                    </tfoot>
-                                                                </table>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
+            const newWeek = {
+                weekNumber: window.projectPlanData.timeline.weeks.length + 1,
+                days: Array.from({ length: 7 }, (_, i) => ({
+                    date: `Day ${i + 1}`,
+                    tasks: []
+                }))
+            };
 
-                    <!-- Costs Card -->
-                    <div class="card bg-base-100 border-2 border-base-300">
-                        <div class="card-body p-4 sm:p-6">
-                            <h3 class="card-title text-lg sm:text-xl text-primary">Financial Overview</h3>
-                            <div class="stats stats-vertical sm:stats-horizontal shadow text-sm sm:text-base">
-                                <div class="stat">
-                                    <div class="stat-title">Total Project Cost</div>
-                                    <div class="stat-value text-primary text-lg sm:text-2xl">${projectPlan.costs.totalCost}</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-title">Weekly Average</div>
-                                    <div class="stat-value text-secondary text-lg sm:text-2xl">${projectPlan.costs.weeklyAverage}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="divider">Cost Breakdown by Phase</div>
-                            
-                            <div class="overflow-x-auto -mx-4 sm:mx-0">
-                                <table class="table table-xs sm:table-sm table-zebra">
-                                    <thead>
-                                        <tr>
-                                            <th>Phase</th>
-                                            <th>Total Cost</th>
-                                            <th>Weekly Payments</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="text-xs sm:text-sm">
-                                        ${projectPlan.costs.breakdownByPhase.map(phase => `
-                                            <tr>
-                                                <td>${phase.phase}</td>
-                                                <td>${phase.cost}</td>
-                                                <td>
-                                                    <div class="flex flex-wrap gap-1 sm:gap-2">
-                                                        ${phase.weeklyPayments.map(payment => `
-                                                            <span class="badge badge-ghost text-xs sm:text-sm">${payment}</span>
-                                                        `).join('')}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+            window.projectPlanData.timeline.weeks.push(newWeek);
+            displayResults(window.projectPlanData);
+            updateUrlHash();
+        }
 
-                    <!-- Recommendations Card -->
-                    <div class="card bg-accent text-accent-content">
-                        <div class="card-body p-4 sm:p-6">
-                            <h3 class="card-title text-lg sm:text-xl">Recommendations</h3>
-                            <ul class="list-disc list-inside space-y-2 text-sm sm:text-base">
-                                ${projectPlan.recommendations.map(rec => `
-                                    <li>${rec}</li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            `;
+        function addNewTask(weekIndex, dayIndex) {
+            if (!window.projectPlanData.timeline) {
+                addNewWeek();
+            }
+
+            const newTask = {
+                id: `task-${Date.now()}`,
+                title: '',
+                description: '',
+                assignedTo: '',
+                estimatedHours: 0
+            };
+
+            window.projectPlanData.timeline.weeks[weekIndex].days[dayIndex].tasks.push(newTask);
+            displayResults(window.projectPlanData);
+            updateUrlHash();
+        }
+
+        function deleteTask(weekIndex, dayIndex, taskIndex) {
+            window.projectPlanData.timeline.weeks[weekIndex].days[dayIndex].tasks.splice(taskIndex, 1);
+            displayResults(window.projectPlanData);
+            updateUrlHash();
+        }
+
+        function deleteWeek(weekIndex) {
+            window.projectPlanData.timeline.weeks.splice(weekIndex, 1);
+            window.projectPlanData.timeline.weeks.forEach((week, index) => {
+                week.weekNumber = index + 1;
+            });
+            displayResults(window.projectPlanData);
+            updateUrlHash();
+        }
+
+        function updateTaskTitle(taskId, newTitle) {
+            const task = findTask(taskId);
+            if (task) {
+                task.title = newTitle;
+                updateUrlHash();
+            }
+        }
+
+        function updateTaskDescription(taskId, newDescription) {
+            const task = findTask(taskId);
+            if (task) {
+                task.description = newDescription;
+                updateUrlHash();
+            }
+        }
+
+        function updateTaskAssignee(taskId, newAssignee) {
+            const task = findTask(taskId);
+            if (task) {
+                task.assignedTo = newAssignee;
+                // Recalculate costs and update display
+                calculateAndDisplayCost(task);
+                displayResults(window.projectPlanData);
+                updateUrlHash();
+            }
+        }
+
+        function updateTaskHours(taskId, newHours) {
+            const task = findTask(taskId);
+            if (task) {
+                task.estimatedHours = parseFloat(newHours);
+                // Recalculate costs and update display
+                calculateAndDisplayCost(task);
+                displayResults(window.projectPlanData);
+                updateUrlHash();
+            }
+        }
+
+        function findTask(taskId) {
+            if (!window.projectPlanData) return null;
+            
+            for (const week of window.projectPlanData.timeline.weeks) {
+                for (const day of week.days) {
+                    const task = day.tasks.find(t => t.id === taskId);
+                    if (task) return task;
+                }
+            }
+            return null;
         }
 
         // Add initial team member field
@@ -740,6 +1147,63 @@ Requirements:
         window.addEventListener('hashchange', function() {
             setTimeout(updateQRCode, 100); // Add a small delay to ensure hash is updated
         });
+
+        // Task management functions
+        let projectPlanData = null;
+
+        function getTeamMemberOptions(selectedMember) {
+            const teamMembers = Array.from(document.querySelectorAll('#teamMembers .card'))
+                .map(card => {
+                    const nameInput = card.querySelector('input[placeholder="Team Member Name"]');
+                    const name = nameInput.value.trim();
+                    return name ? name : null;
+                })
+                .filter(name => name !== null && name !== '');
+            
+            return `
+                <option value="">👤 Assign to</option>
+                ${teamMembers.map(member => 
+                    `<option value="${member}" ${member === selectedMember ? 'selected' : ''}>${member}</option>`
+                ).join('')}
+            `;
+        }
+
+        // Add event listener to update task assignees when team members change
+        function addTeamMemberChangeListener(memberDiv) {
+            const nameInput = memberDiv.querySelector('input[placeholder="Team Member Name"]');
+            nameInput.addEventListener('input', () => {
+                // Update all task assignee dropdowns
+                document.querySelectorAll('select[onchange^="updateTaskAssignee"]').forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = getTeamMemberOptions(currentValue);
+                });
+                updateUrlHash();
+            });
+        }
+
+        function updateUrlHash() {
+            const apiKey = document.getElementById('apiKey').value;
+            const projectDescription = document.getElementById('projectDescription').value;
+            const projectLanguage = document.getElementById('projectLanguage').value;
+            const maxDailyHours = document.getElementById('maxDailyHours').value;
+            const teamMembers = Array.from(document.querySelectorAll('#teamMembers .card')).map(card => ({
+                name: card.querySelector('input[placeholder="Team Member Name"]').value,
+                rate: card.querySelector('input[placeholder="0.00"]').value,
+                currency: card.querySelector('select').value
+            }));
+
+            const hashData = {
+                apiKey,
+                projectDescription,
+                projectLanguage,
+                maxDailyHours,
+                teamMembers,
+                projectPlan: window.projectPlanData
+            };
+
+            window.location.hash = encodeURIComponent(JSON.stringify(hashData));
+            updateQRCode(); // Update QR code with new URL
+        }
     </script>
 
     <!-- Footer -->
