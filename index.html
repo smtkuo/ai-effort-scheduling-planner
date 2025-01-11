@@ -118,11 +118,30 @@
                     <div id="results" class="prose max-w-full">
                         <!-- Results will be displayed here -->
                     </div>
-                    <button class="btn btn-primary mt-4 w-full sm:w-auto" onclick="generatePlan()">Generate Plan</button>
+                    <div class="divider my-4"></div>
+                    <div class="flex flex-col gap-4">
+                        <button class="btn btn-primary btn-lg w-full hover:scale-[1.02] transform transition-all duration-200 shadow-lg hover:shadow-xl" onclick="generatePlan()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            Generate Plan
+                        </button>
+                        <div class="card bg-base-200 shadow-sm hover:shadow-md transition-all duration-300">
+                            <div class="card-body p-6 items-center text-center">
+                                <div class="w-full flex justify-center">
+                                    <div id="qrcode" class="bg-white rounded-xl shadow-inner w-[320px] h-[320px] flex items-center justify-center overflow-hidden"></div>
+                                </div>
+                                <p class="text-sm text-base-content/70 mt-3">Scan to share configuration</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Add QR Code library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 
     <script>
         // Get API key and team members from URL hash if present
@@ -660,6 +679,67 @@ Requirements:
             document.documentElement.lang = lang;
             updateUrlHash();
         }
+
+        // Update QR code generation function
+        function updateQRCode() {
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = ''; // Clear previous QR code
+            
+            let currentUrl = window.location.href;
+            
+            // Check if URL is valid and has content
+            if (!currentUrl || currentUrl === window.location.origin + window.location.pathname) {
+                qrcodeDiv.innerHTML = '<div class="text-sm text-base-content/70 p-4">Configure settings</div>';
+                return;
+            }
+
+            try {
+                // Create canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = 320;
+                canvas.height = 320;
+                canvas.style.width = '320px';
+                canvas.style.height = '320px';
+                canvas.style.display = 'block';
+                qrcodeDiv.appendChild(canvas);
+
+                // Generate QR code
+                const qr = new QRious({
+                    element: canvas,
+                    value: currentUrl,
+                    size: 320,
+                    level: 'L',
+                    background: '#FFFFFF',
+                    backgroundAlpha: 1,
+                    foreground: '#000000',
+                    foregroundAlpha: 1,
+                    padding: null
+                });
+
+                // Adjust canvas style
+                canvas.style.imageRendering = 'pixelated';
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                qrcodeDiv.innerHTML = '<div class="text-sm text-error p-4">QR Code generation failed</div>';
+            }
+        }
+
+        // Update URL hash function to include QR code update
+        const originalUpdateUrlHash = updateUrlHash;
+        updateUrlHash = function() {
+            originalUpdateUrlHash();
+            setTimeout(updateQRCode, 100); // Add a small delay to ensure hash is updated
+        };
+
+        // Update QR code on page load
+        window.addEventListener('load', function() {
+            setTimeout(updateQRCode, 100); // Add a small delay to ensure page is fully loaded
+        });
+
+        // Update QR code when hash changes
+        window.addEventListener('hashchange', function() {
+            setTimeout(updateQRCode, 100); // Add a small delay to ensure hash is updated
+        });
     </script>
 
     <!-- Footer -->
