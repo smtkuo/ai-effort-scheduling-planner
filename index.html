@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Effort Planning System</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-blue': '#2563eb',
+                        'custom-indigo': '#4f46e5',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media (max-width: 640px) {
+            .container {
+                padding: 0.5rem;
+            }
+        }
+        .card {
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            @apply shadow-lg hover:shadow-xl transition-all duration-200;
+        }
+        .input:focus, .select:focus, .textarea:focus {
+            @apply border-primary shadow-sm;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-base-200 to-base-300">
+    <div class="container mx-auto p-4 max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-4 sm:mb-8">
+            <h1 class="text-2xl sm:text-4xl font-bold text-primary mb-2">AI Effort Planning System</h1>
+            <p class="text-base sm:text-lg text-base-content/70">Intelligent Project Planning & Cost Estimation</p>
+        </header>
+
+        <!-- Main Form -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <!-- Project Details Section -->
+            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
+                <div class="card-body p-4 sm:p-6">
+                    <h2 class="card-title text-xl sm:text-2xl mb-4">Project Details</h2>
+                    
+                    <!-- Language Selection -->
+                    <div class="form-control mb-4">
+                        <label class="label">
+                            <span class="label-text">Project Language</span>
+                            <span class="label-text-alt text-base-content/70">Select project language</span>
+                        </label>
+                        <select id="projectLanguage" class="select select-bordered w-full" onchange="updateLanguage()">
+                            <option value="en">English (EN)</option>
+                            <option value="tr">Türkçe (TR)</option>
+                            <option value="de">Deutsch (DE)</option>
+                            <option value="es">Español (ES)</option>
+                            <option value="fr">Français (FR)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Project Description</span>
+                        </label>
+                        <textarea id="projectDescription" class="textarea textarea-bordered h-24 sm:h-32 text-sm sm:text-base" placeholder="Enter detailed project description"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Configuration -->
+            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
+                <div class="card-body p-4 sm:p-6">
+                    <h2 class="card-title text-xl sm:text-2xl mb-4">API Configuration</h2>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">RapidAPI Key</span>
+                        </label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="apiKey" class="input input-bordered flex-1 text-sm sm:text-base" placeholder="Enter your RapidAPI key">
+                            <button class="btn btn-primary w-full sm:w-auto" onclick="window.location.href='https://rapidapi.com/bilgisamapi-api2/api/generative-ai-api-openai-gpt-4o-api-ai-integration'">
+                                Get Key
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Members Section -->
+            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
+                <div class="card-body p-4 sm:p-6">
+                    <h2 class="card-title text-xl sm:text-2xl mb-4">Team Members</h2>
+                    <div id="teamMembers" class="space-y-2">
+                        <!-- Team member entries will be added here -->
+                    </div>
+                    <button class="btn btn-primary btn-lg gap-2 mt-6 w-full sm:w-auto" onclick="addTeamMember()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Team Member
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
+                <div class="card-body p-4 sm:p-6">
+                    <h2 class="card-title text-xl sm:text-2xl mb-4">Planning Results</h2>
+                    <div id="results" class="prose max-w-full">
+                        <!-- Results will be displayed here -->
+                    </div>
+                    <button class="btn btn-primary mt-4 w-full sm:w-auto" onclick="generatePlan()">Generate Plan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get API key and team members from URL hash if present
+        window.onload = function() {
+            try {
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    const decodedData = JSON.parse(decodeURIComponent(hash));
+                    if (decodedData.apiKey) {
+                        document.getElementById('apiKey').value = decodedData.apiKey;
+                    }
+                    if (decodedData.projectDescription) {
+                        document.getElementById('projectDescription').value = decodedData.projectDescription;
+                    }
+                    if (decodedData.projectLanguage) {
+                        document.getElementById('projectLanguage').value = decodedData.projectLanguage;
+                        document.documentElement.lang = decodedData.projectLanguage;
+                    }
+                    if (decodedData.teamMembers && Array.isArray(decodedData.teamMembers)) {
+                        // Clear existing team members
+                        document.getElementById('teamMembers').innerHTML = '';
+                        // Add team members from URL
+                        decodedData.teamMembers.forEach(member => {
+                            addTeamMember(member);
+                        });
+                    } else {
+                        // Add initial team member if no data in URL
+                        addTeamMember();
+                    }
+                } else {
+                    // Add initial team member if no hash
+                    addTeamMember();
+                }
+            } catch (error) {
+                console.error('Error parsing URL data:', error);
+                addTeamMember();
+            }
+        }
+
+        // Update URL hash function to include language
+        function updateUrlHash() {
+            const apiKey = document.getElementById('apiKey').value;
+            const projectDescription = document.getElementById('projectDescription').value;
+            const projectLanguage = document.getElementById('projectLanguage').value;
+            const teamMembers = [];
+            
+            document.querySelectorAll('#teamMembers .card').forEach(card => {
+                const nameInput = card.querySelector('input[placeholder="Team Member Name"]');
+                const rateInput = card.querySelector('input[placeholder="0.00"]');
+                const hoursInput = card.querySelector('input[placeholder="0"]');
+                const currencySelect = card.querySelector('select');
+
+                if (nameInput.value || rateInput.value) {
+                    teamMembers.push({
+                        name: nameInput.value,
+                        rate: rateInput.value,
+                        dailyHours: hoursInput.value,
+                        currency: currencySelect.value
+                    });
+                }
+            });
+
+            const hashData = {
+                apiKey: apiKey,
+                projectDescription: projectDescription,
+                projectLanguage: projectLanguage,
+                teamMembers: teamMembers
+            };
+
+            window.location.hash = encodeURIComponent(JSON.stringify(hashData));
+        }
+
+        // Add event listeners for all inputs that should trigger hash updates
+        document.getElementById('apiKey').addEventListener('input', updateUrlHash);
+        document.getElementById('projectDescription').addEventListener('input', updateUrlHash);
+
+        // Team member management
+        function addTeamMember(memberData = null) {
+            const teamMembersDiv = document.getElementById('teamMembers');
+            const memberDiv = document.createElement('div');
+            memberDiv.className = 'card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 border border-base-200';
+            memberDiv.innerHTML = `
+                <div class="card-body p-6 bg-gradient-to-r from-base-100 to-base-50">
+                    <div class="flex justify-between items-start">
+                        <div class="form-control w-full">
+                            <input type="text" 
+                                class="input input-lg input-ghost w-full text-xl font-semibold focus:input-ghost border-0 focus:bg-base-100" 
+                                placeholder="Team Member Name" 
+                                value="${memberData?.name || ''}" 
+                                oninput="updateUrlHash()"
+                            >
+                        </div>
+                        <button class="btn btn-circle btn-sm btn-ghost text-error hover:bg-error/10" 
+                            onclick="this.closest('.card').remove(); updateUrlHash()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                        <!-- Hourly Rate Section -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-medium text-base-content/80">Hourly Rate</span>
+                            </label>
+                            <div class="join w-full shadow-sm">
+                                <select class="select select-bordered join-item w-24 bg-base-100 hover:bg-base-200" onchange="updateUrlHash()">
+                                    <option value="USD" ${memberData?.currency === 'USD' ? 'selected' : ''}>$</option>
+                                    <option value="EUR" ${memberData?.currency === 'EUR' ? 'selected' : ''}>€</option>
+                                    <option value="GBP" ${memberData?.currency === 'GBP' ? 'selected' : ''}>£</option>
+                                    <option value="TRY" ${memberData?.currency === 'TRY' ? 'selected' : ''}>₺</option>
+                                </select>
+                                <input type="number" 
+                                    class="input input-bordered join-item w-full text-right pr-2 focus:z-10" 
+                                    placeholder="0.00" 
+                                    value="${memberData?.rate || ''}" 
+                                    oninput="updateUrlHash()"
+                                >
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt text-success font-mono opacity-75"></span>
+                            </label>
+                        </div>
+
+                        <!-- Daily Hours Section -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-medium text-base-content/80">Daily Hours</span>
+                            </label>
+                            <div class="join w-full shadow-sm">
+                                <input type="number" 
+                                    class="input input-bordered join-item w-full text-right focus:z-10" 
+                                    placeholder="0" 
+                                    value="${memberData?.dailyHours || '8'}" 
+                                    min="1" 
+                                    max="24" 
+                                    oninput="updateUrlHash()"
+                                >
+                                <span class="join-item btn no-animation bg-base-100 border-base-300">hrs</span>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Cost Section -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-medium text-base-content/80">Weekly Cost</span>
+                            </label>
+                            <div class="bg-base-200/50 rounded-lg p-4 text-right font-mono text-lg font-semibold shadow-inner">
+                                <span class="weekly-cost">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners
+            const rateInput = memberDiv.querySelector('input[type="number"]:not([placeholder="0"])');
+            const hoursInput = memberDiv.querySelector('input[placeholder="0"]');
+            const currencySelect = memberDiv.querySelector('select');
+            const weeklyDisplay = memberDiv.querySelector('.weekly-cost');
+            const usdConversionSpan = memberDiv.querySelector('.label-text-alt.text-success');
+
+            function updateUSDConversion() {
+                const rate = parseFloat(rateInput.value) || 0;
+                const currency = currencySelect.value;
+                if (rate && currency !== 'USD') {
+                    const usdRate = convertToUSD(rate, currency);
+                    usdConversionSpan.textContent = `≈ $${usdRate} USD/hour`;
+                } else {
+                    usdConversionSpan.textContent = '';
+                }
+            }
+
+            function updateWeeklyCost() {
+                const rate = parseFloat(rateInput.value) || 0;
+                const hours = parseFloat(hoursInput.value) || 0;
+                const currency = currencySelect.value;
+                const weeklyAmount = rate * hours * 5; // 5 working days
+                weeklyDisplay.textContent = formatCurrency(weeklyAmount, currency);
+
+                // Show USD conversion if currency is not USD
+                if (currency !== 'USD' && rate > 0) {
+                    const weeklyAmountUSD = convertToUSD(weeklyAmount, currency);
+                    weeklyDisplay.textContent += ` (${formatCurrency(weeklyAmountUSD, 'USD')})`;
+                }
+
+                // Show hourly rate in USD if currency is not USD
+                if (currency !== 'USD' && rate > 0) {
+                    const usdRate = convertToUSD(rate, currency);
+                    usdConversionSpan.textContent = `≈ ${formatCurrency(usdRate, 'USD')}/hour`;
+                } else {
+                    usdConversionSpan.textContent = '';
+                }
+            }
+
+            rateInput.addEventListener('input', updateWeeklyCost);
+            hoursInput.addEventListener('input', updateWeeklyCost);
+            currencySelect.addEventListener('change', updateWeeklyCost);
+
+            // Initial update
+            updateWeeklyCost();
+
+            teamMembersDiv.appendChild(memberDiv);
+        }
+
+        // Currency conversion rates (you should update these with real-time rates)
+        const conversionRates = {
+            USD: 1,
+            EUR: 1/0.9709,
+            GBP: 1/0.8124,
+            TRY: 1/35.3269
+        };
+
+        // Currency symbols
+        const currencySymbols = {
+            USD: '$',
+            EUR: '€',
+            GBP: '£',
+            TRY: '₺'
+        };
+
+        function convertToUSD(amount, fromCurrency) {
+            return (amount * conversionRates[fromCurrency]).toFixed(2);
+        }
+
+        function formatCurrency(amount, currency) {
+            return `${currencySymbols[currency]}${parseFloat(amount).toFixed(2)}`;
+        }
+
+        // Generate plan function
+        function generatePlan() {
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('Please enter your RapidAPI key');
+                return;
+            }
+
+            // Show loading state
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-8">
+                    <span class="loading loading-spinner loading-lg text-primary"></span>
+                    <p class="mt-4 text-lg font-semibold text-primary/80">Analyzing and Generating Plan...</p>
+                </div>
+            `;
+
+            const projectDescription = document.getElementById('projectDescription').value;
+            const projectLanguage = document.getElementById('projectLanguage').value;
+            
+            // Collect team members data with currency
+            const teamMembers = [];
+            document.querySelectorAll('#teamMembers .card').forEach(card => {
+                const nameInput = card.querySelector('input[placeholder="Team Member Name"]');
+                const rateInput = card.querySelector('input[placeholder="0.00"]');
+                const hoursInput = card.querySelector('input[placeholder="0"]');
+                const currencySelect = card.querySelector('select');
+                
+                const currency = currencySelect.value;
+                const hourlyRate = rateInput.value;
+                const dailyHours = hoursInput.value;
+                
+                if (nameInput.value || hourlyRate) {
+                    teamMembers.push({
+                        name: nameInput.value,
+                        hourlyRate: hourlyRate,
+                        dailyHours: dailyHours,
+                        currency: currency,
+                        hourlyRateUSD: convertToUSD(hourlyRate, currency)
+                    });
+                }
+            });
+
+            const data = JSON.stringify({
+                prompt: `Create a detailed project plan with weekly cost breakdown for the following project:
+
+Project Description (${projectLanguage.toUpperCase()}):
+${projectDescription}
+
+Team Members Information:
+${teamMembers.map(member => `
+- ${member.name}:
+  • Hourly Rate: ${formatCurrency(member.hourlyRate, member.currency)}
+  • Working Hours: ${member.dailyHours} hours/day
+  • Weekly Hours: ${member.dailyHours * 5} hours/week
+  • Weekly Cost: ${formatCurrency(member.hourlyRate * member.dailyHours * 5, member.currency)}
+  • USD Equivalent: ${formatCurrency(convertToUSD(member.hourlyRate * member.dailyHours * 5, member.currency), 'USD')}`).join('\n')}
+
+Requirements:
+1. Cost Calculations:
+   - Calculate costs in each member's original currency
+   - Show USD equivalent for comparison only
+   - Track weekly costs per member in their preferred currency
+   - Show phase totals in USD for project overview
+
+2. Time Planning:
+   - Consider individual daily working hours
+   - Plan tasks according to available hours
+   - Optimize resource allocation
+
+3. Breakdown Requirements:
+   - Show detailed weekly cost per member in their original currency
+   - Include USD equivalent for reference
+   - Display phase-wise progress
+   - Track individual contributions
+
+4. Financial Reporting:
+   - Primary display in member's original currency
+   - Include USD equivalent for global overview
+   - Calculate weekly and phase-wise totals
+   - Provide cost efficiency recommendations`,
+                responseType: {
+                    format: 'json',
+                    structure: {
+                        projectPlan: {
+                            summary: 'string',
+                            timeline: {
+                                totalDuration: 'string',
+                                phases: [{
+                                    name: 'string',
+                                    duration: 'string',
+                                    tasks: ['string'],
+                                    assignedTeamMembers: ['string'],
+                                    weeklyBreakdown: [{
+                                        weekNumber: 'string',
+                                        costs: {
+                                            totalForWeek: 'string',
+                                            byMember: [{
+                                                name: 'string',
+                                                hours: 'string',
+                                                cost: 'string',
+                                                costOriginal: 'string',
+                                                currency: 'string'
+                                            }]
+                                        }
+                                    }]
+                                }]
+                            },
+                            costs: {
+                                totalCost: 'string',
+                                weeklyAverage: 'string',
+                                breakdownByPhase: [{
+                                    phase: 'string',
+                                    cost: 'string',
+                                    weeklyPayments: ['string']
+                                }]
+                            },
+                            recommendations: ['string']
+                        }
+                    }
+                },
+                lang: projectLanguage.toUpperCase()
+            });
+
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+
+            xhr.addEventListener('readystatechange', function () {
+                if (this.readyState === this.DONE) {
+                    const response = JSON.parse(this.responseText);
+                    displayResults(response.result.response.projectPlan);
+                }
+            });
+
+            xhr.open('POST', 'https://generative-ai-api-openai-gpt-4o-api-ai-integration.p.rapidapi.com/generate?noqueue=1');
+            xhr.setRequestHeader('x-rapidapi-key', apiKey);
+            xhr.setRequestHeader('x-rapidapi-host', 'generative-ai-api-openai-gpt-4o-api-ai-integration.p.rapidapi.com');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.send(data);
+        }
+
+        function displayResults(projectPlan) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <!-- Summary Card -->
+                    <div class="card bg-primary text-primary-content">
+                        <div class="card-body p-4 sm:p-6">
+                            <h3 class="card-title text-lg sm:text-2xl">Project Summary</h3>
+                            <p class="text-sm sm:text-base">${projectPlan.summary}</p>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Card -->
+                    <div class="card bg-base-100 border-2 border-base-300">
+                        <div class="card-body p-4 sm:p-6">
+                            <h3 class="card-title text-lg sm:text-xl text-primary">Timeline Overview</h3>
+                            <div class="badge badge-secondary badge-lg text-xs sm:text-sm">Total Duration: ${projectPlan.timeline.totalDuration}</div>
+                            
+                            <div class="divider"></div>
+                            
+                            <!-- Phases Timeline -->
+                            <div class="space-y-4">
+                                ${projectPlan.timeline.phases.map((phase, index) => `
+                                    <div class="collapse collapse-arrow bg-base-200">
+                                        <input type="radio" name="phases-accordion" ${index === 0 ? 'checked' : ''} />
+                                        <div class="collapse-title text-base sm:text-xl font-medium flex items-center gap-2 flex-wrap">
+                                            <div class="badge badge-primary text-xs sm:text-sm">${phase.duration}</div>
+                                            ${phase.name}
+                                        </div>
+                                        <div class="collapse-content">
+                                            <div class="card bg-base-100 shadow-sm">
+                                                <div class="card-body p-2 sm:p-4">
+                                                    <div class="space-y-4">
+                                                        <div>
+                                                            <h4 class="font-semibold text-primary text-sm sm:text-base">Tasks:</h4>
+                                                            <ul class="list-disc list-inside space-y-1 mt-2 text-sm sm:text-base">
+                                                                ${phase.tasks.map(task => `<li>${task}</li>`).join('')}
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-semibold text-primary text-sm sm:text-base">Team Members:</h4>
+                                                            <div class="flex flex-wrap gap-2 mt-2">
+                                                                ${phase.assignedTeamMembers.map(member => `
+                                                                    <div class="badge badge-outline text-xs sm:text-sm">${member}</div>
+                                                                `).join('')}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-semibold text-primary text-sm sm:text-base">Weekly Breakdown:</h4>
+                                                            <div class="overflow-x-auto -mx-4 sm:mx-0">
+                                                                <table class="table table-xs sm:table-sm">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Week</th>
+                                                                            <th>Team Member</th>
+                                                                            <th>Hours</th>
+                                                                            <th>Cost (Original)</th>
+                                                                            <th>Cost</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="text-xs sm:text-sm">
+                                                                        ${phase.weeklyBreakdown.map(week => 
+                                                                            week.costs.byMember.map(member => `
+                                                                                <tr>
+                                                                                    <td>Week ${week.weekNumber}</td>
+                                                                                    <td>${member.name}</td>
+                                                                                    <td>${member.hours}</td>
+                                                                                    <td>${member.costOriginal}</td>
+                                                                                    <td>${member.cost}</td>
+                                                                                </tr>
+                                                                            `).join('')
+                                                                        ).join('')}
+                                                                    </tbody>
+                                                                    <tfoot class="text-xs sm:text-sm font-semibold">
+                                                                        ${phase.weeklyBreakdown.map(week => `
+                                                                            <tr>
+                                                                                <td>Week ${week.weekNumber} Total</td>
+                                                                                <td colspan="2"></td>
+                                                                                <td colspan="2">${week.costs.totalForWeek}</td>
+                                                                            </tr>
+                                                                        `).join('')}
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Costs Card -->
+                    <div class="card bg-base-100 border-2 border-base-300">
+                        <div class="card-body p-4 sm:p-6">
+                            <h3 class="card-title text-lg sm:text-xl text-primary">Financial Overview</h3>
+                            <div class="stats stats-vertical sm:stats-horizontal shadow text-sm sm:text-base">
+                                <div class="stat">
+                                    <div class="stat-title">Total Project Cost</div>
+                                    <div class="stat-value text-primary text-lg sm:text-2xl">${projectPlan.costs.totalCost}</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-title">Weekly Average</div>
+                                    <div class="stat-value text-secondary text-lg sm:text-2xl">${projectPlan.costs.weeklyAverage}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="divider">Cost Breakdown by Phase</div>
+                            
+                            <div class="overflow-x-auto -mx-4 sm:mx-0">
+                                <table class="table table-xs sm:table-sm table-zebra">
+                                    <thead>
+                                        <tr>
+                                            <th>Phase</th>
+                                            <th>Total Cost</th>
+                                            <th>Weekly Payments</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-xs sm:text-sm">
+                                        ${projectPlan.costs.breakdownByPhase.map(phase => `
+                                            <tr>
+                                                <td>${phase.phase}</td>
+                                                <td>${phase.cost}</td>
+                                                <td>
+                                                    <div class="flex flex-wrap gap-1 sm:gap-2">
+                                                        ${phase.weeklyPayments.map(payment => `
+                                                            <span class="badge badge-ghost text-xs sm:text-sm">${payment}</span>
+                                                        `).join('')}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Card -->
+                    <div class="card bg-accent text-accent-content">
+                        <div class="card-body p-4 sm:p-6">
+                            <h3 class="card-title text-lg sm:text-xl">Recommendations</h3>
+                            <ul class="list-disc list-inside space-y-2 text-sm sm:text-base">
+                                ${projectPlan.recommendations.map(rec => `
+                                    <li>${rec}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add initial team member field
+        addTeamMember();
+
+        // Update language function
+        function updateLanguage() {
+            const lang = document.getElementById('projectLanguage').value;
+            document.documentElement.lang = lang;
+            updateUrlHash();
+        }
+    </script>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-4 bg-base-300/80 backdrop-blur-sm text-base-content fixed bottom-0 w-full border-t border-base-200">
+        <div>
+            <a href="https://linkedin.com/in/samet-utku-olgun/" target="_blank" class="btn btn-ghost gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                </svg>
+                Connect on LinkedIn
+            </a>
+        </div>
+    </footer>
+
+    <!-- Add padding to main container to prevent content from being hidden by footer -->
+    <style>
+        @media (max-width: 640px) {
+            .container {
+                padding: 0.5rem;
+                padding-bottom: 5rem;
+            }
+        }
+        .container {
+            padding-bottom: 5rem;
+        }
+    </style>
+</body>
+</html>
