@@ -556,47 +556,51 @@
                                             </button>
                                         </div>
 
-                                        <!-- Task Details -->
-                                        <div class="space-y-3 mt-2">
-                                            <textarea 
-                                                class="textarea textarea-bordered textarea-sm w-full bg-base-100" 
-                                                rows="2"
-                                                onchange="updateTaskDescription('${task.id}', this.value)"
-                                                placeholder="Task description">${task.description || ''}</textarea>
+                                                        <!-- Task Details -->
+                                                        <div class="space-y-3 mt-2">
+                                                            <textarea 
+                                                                class="textarea textarea-bordered textarea-sm w-full bg-base-100" 
+                                                                rows="2"
+                                                                onchange="updateTaskDescription('${task.id}', this.value)"
+                                                                placeholder="Task description">${task.description || ''}</textarea>
 
-                                            <div class="grid grid-cols-1 gap-2">
-                                                <select 
-                                                    class="select select-sm select-bordered w-full bg-base-100" 
-                                                    onchange="updateTaskAssignee('${task.id}', this.value)">
-                                                    <option value="">👤 Assign to</option>
-                                                    ${getTeamMemberOptions(task.assignedTo)}
-                                                </select>
+                                                            <div class="grid grid-cols-1 gap-2">
+                                                                <select 
+                                                                    class="select select-sm select-bordered w-full bg-base-100" 
+                                                                    onchange="updateTaskAssignee('${task.id}', this.value)">
+                                                                    <option value="">👤 Assign to</option>
+                                                                    ${getTeamMemberOptions(task.assignedTo)}
+                                                                </select>
 
-                                                <div class="join w-full">
-                                                    <input 
-                                                        type="number" 
-                                                        class="input input-sm input-bordered join-item w-full bg-base-100" 
-                                                        value="${task.estimatedHours || ''}"
-                                                        onchange="updateTaskHours('${task.id}', this.value)"
-                                                        placeholder="Hours">
-                                                    <span class="btn btn-sm join-item no-animation bg-base-100">h</span>
+                                                                <div class="join w-full">
+                                                                    <input 
+                                                                        type="number" 
+                                                                        class="input input-sm input-bordered join-item w-full bg-base-100" 
+                                                                        value="${task.estimatedHours || ''}"
+                                                                        onchange="updateTaskHours('${task.id}', this.value)"
+                                                                        placeholder="Hours">
+                                                                    <span class="btn btn-sm join-item no-animation bg-base-100">h</span>
+                                                                </div>
+                                                            </div>
+
+                                                            ${calculateAndDisplayCost(task)}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-
-                                            ${calculateAndDisplayCost(task)}
+                                            `).join('')}
+                                            ${day.tasks.length === 0 ? `
+                                                <div class="text-center py-4 text-base-content/50">
+                                                    <p class="text-sm">No tasks yet</p>
+                                                    <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
+                                                        class="btn btn-ghost btn-sm mt-2">
+                                                        Add Task
+                                                    </button>
+                                                </div>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 </div>
                             `).join('')}
-                            ${day.tasks.length === 0 ? `
-                                <div class="text-center py-4 text-base-content/50">
-                                    <p class="text-sm">No tasks yet</p>
-                                    <button onclick="addNewTask(${weekIndex}, ${dayIndex})" 
-                                        class="btn btn-ghost btn-sm mt-2">
-                                        Add Task
-                                    </button>
-                                </div>
-                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -1224,6 +1228,7 @@ Please create a detailed development plan that:
             const projectDescription = document.getElementById('projectDescription').value;
             const projectLanguage = document.getElementById('projectLanguage').value;
             const maxDailyHours = document.getElementById('maxDailyHours').value;
+            
             const teamMembers = Array.from(document.querySelectorAll('#teamMembers .card')).map(card => ({
                 name: card.querySelector('input[placeholder="Team Member Name"]').value,
                 rate: card.querySelector('input[placeholder="0.00"]').value,
@@ -1239,9 +1244,39 @@ Please create a detailed development plan that:
                 projectPlan: window.projectPlanData
             };
 
-            window.location.hash = encodeURIComponent(JSON.stringify(hashData));
-            updateQRCode(); // Update QR code with new URL
+            window.location.hash = btoa(JSON.stringify(hashData));
+            updateQRCode();
         }
+
+        // Add maxDailyHours event listener
+        document.getElementById('maxDailyHours').addEventListener('change', updateUrlHash);
+
+        // Load data from URL hash on page load
+        window.addEventListener('load', () => {
+            try {
+                if (window.location.hash) {
+                    const decodedData = JSON.parse(atob(window.location.hash.substring(1)));
+                    
+                    // Set maxDailyHours if present
+                    if (decodedData.maxDailyHours) {
+                        document.getElementById('maxDailyHours').value = decodedData.maxDailyHours;
+                    }
+                    
+                    // Set project plan if present
+                    if (decodedData.projectPlan) {
+                        window.projectPlanData = decodedData.projectPlan;
+                        displayResults(window.projectPlanData);
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing URL data:', error);
+            }
+        });
+
+        // Add change event listener for maxDailyHours
+        document.getElementById('maxDailyHours').addEventListener('change', () => {
+            updateUrlHash();
+        });
     </script>
 
     <!-- Footer -->
