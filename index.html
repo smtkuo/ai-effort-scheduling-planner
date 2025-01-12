@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="corporate">
+<html lang="en" data-theme="winter">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,6 +26,7 @@
         }
         .card {
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
         .card:hover {
             transform: translateY(-2px);
@@ -36,30 +37,50 @@
         .input:focus, .select:focus, .textarea:focus {
             @apply border-primary shadow-sm;
         }
+        .glass-card {
+            @apply bg-opacity-40 backdrop-blur-lg border border-opacity-20;
+        }
+        .gradient-border {
+            @apply border border-opacity-20 bg-gradient-to-r from-primary/5 to-secondary/5;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-base-200 to-base-300">
+<body class="min-h-screen bg-gradient-to-br from-base-200 via-base-100 to-base-300">
     <div class="container mx-auto p-4 max-w-7xl">
         <!-- Header -->
-        <header class="text-center mb-4 sm:mb-8">
-            <h1 class="text-2xl sm:text-4xl font-bold text-primary mb-2">AI Effort Planning System</h1>
-            <p class="text-base sm:text-lg text-base-content/70">Intelligent Project Planning & Cost Estimation</p>
+        <header class="text-center mb-8 sm:mb-12">
+            <div class="inline-block">
+                <h1 class="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-3">AI Effort Planning System</h1>
+                <p class="text-base sm:text-lg text-base-content/70">Intelligent Project Planning & Cost Estimation</p>
+                <div class="mt-2 flex justify-center gap-2">
+                    <div class="badge badge-primary">Smart Planning</div>
+                    <div class="badge badge-secondary">Cost Optimization</div>
+                    <div class="badge badge-accent">Team Management</div>
+                </div>
+            </div>
         </header>
 
         <!-- Main Form -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             <!-- Project Details Section -->
-            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
-                <div class="card-body p-4 sm:p-6">
-                    <h2 class="card-title text-xl sm:text-2xl mb-4">Project Details</h2>
+            <div class="card glass-card shadow-xl">
+                <div class="card-body p-6 sm:p-8">
+                    <h2 class="card-title text-2xl sm:text-3xl mb-6 flex items-center gap-3">
+                        <span class="badge badge-primary p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </span>
+                        Project Details
+                    </h2>
                     
                     <!-- Language Selection -->
-                    <div class="form-control mb-4">
+                    <div class="form-control mb-6">
                         <label class="label">
-                            <span class="label-text">Project Language</span>
+                            <span class="label-text text-lg font-medium">Project Language</span>
                             <span class="label-text-alt text-base-content/70">Select project language</span>
                         </label>
-                        <select id="projectLanguage" class="select select-bordered w-full" onchange="updateLanguage()">
+                        <select id="projectLanguage" class="select select-bordered w-full bg-base-100/50 backdrop-blur" onchange="updateLanguage()">
                             <option value="en">English (EN)</option>
                             <option value="tr">Türkçe (TR)</option>
                             <option value="de">Deutsch (DE)</option>
@@ -68,61 +89,91 @@
                         </select>
                     </div>
 
-                    <div class="form-control">
+                    <div class="form-control mb-6">
                         <label class="label">
-                            <span class="label-text">Project Description</span>
+                            <span class="label-text text-lg font-medium">Project Description</span>
                         </label>
-                        <textarea id="projectDescription" class="textarea textarea-bordered h-24 sm:h-32 text-sm sm:text-base" placeholder="Enter detailed project description"></textarea>
+                        <textarea 
+                            id="projectDescription" 
+                            class="textarea textarea-bordered h-32 sm:h-40 bg-base-100/50 backdrop-blur text-base" 
+                            placeholder="Enter detailed project description"
+                        ></textarea>
                     </div>
 
                     <!-- Add Daily Maximum Working Hours Input -->
-                    <div class="form-control mt-4">
+                    <div class="form-control">
                         <label class="label">
-                            <span class="label-text">Daily Maximum Working Hours</span>
+                            <span class="label-text text-lg font-medium">Daily Maximum Working Hours</span>
                         </label>
                         <input 
                             type="number" 
                             id="maxDailyHours" 
-                            class="input input-bordered" 
+                            class="input input-bordered bg-base-100/50 backdrop-blur" 
                             placeholder="8" 
                             min="1" 
                             max="24" 
-                            value="${decodedData?.maxDailyHours || '8'}" 
+                            value="8" 
                             oninput="updateUrlHash()"
                         >
                         <label class="label">
-                            <span class="label-text-alt">Maximum hours a team member can work per day</span>
+                            <span class="label-text-alt text-base-content/70">Maximum hours a team member can work per day</span>
                         </label>
                     </div>
                 </div>
             </div>
 
             <!-- API Configuration -->
-            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
-                <div class="card-body p-4 sm:p-6">
-                    <h2 class="card-title text-xl sm:text-2xl mb-4">API Configuration</h2>
+            <div class="card glass-card shadow-xl">
+                <div class="card-body p-6 sm:p-8">
+                    <h2 class="card-title text-2xl sm:text-3xl mb-6 flex items-center gap-3">
+                        <span class="badge badge-secondary p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                            </svg>
+                        </span>
+                        API Configuration
+                    </h2>
                     <div class="form-control">
                         <label class="label">
-                            <span class="label-text">RapidAPI Key</span>
+                            <span class="label-text text-lg font-medium">RapidAPI Key</span>
                         </label>
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <input type="text" id="apiKey" class="input input-bordered flex-1 text-sm sm:text-base" placeholder="Enter your RapidAPI key">
-                            <button class="btn btn-primary w-full sm:w-auto" onclick="window.location.href='https://rapidapi.com/bilgisamapi-api2/api/generative-ai-api-openai-gpt-4o-api-ai-integration'">
-                                Get Key
-                            </button>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input 
+                                type="text" 
+                                id="apiKey" 
+                                class="input input-bordered flex-1 bg-base-100/50 backdrop-blur" 
+                                placeholder="Enter your RapidAPI key"
+                            >
+                            <a 
+                                href="https://rapidapi.com/bilgisamapi-api2/api/generative-ai-api-openai-gpt-4o-api-ai-integration" 
+                                target="_blank"
+                                class="btn btn-primary gap-2 w-full sm:w-auto"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Get API Key
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Team Members Section -->
-            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
-                <div class="card-body p-4 sm:p-6">
-                    <h2 class="card-title text-xl sm:text-2xl mb-4">Team Members</h2>
-                    <div id="teamMembers" class="space-y-2">
+            <div class="card glass-card shadow-xl">
+                <div class="card-body p-6 sm:p-8">
+                    <h2 class="card-title text-2xl sm:text-3xl mb-6 flex items-center gap-3">
+                        <span class="badge badge-accent p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </span>
+                        Team Members
+                    </h2>
+                    <div id="teamMembers" class="space-y-4">
                         <!-- Team member entries will be added here -->
                     </div>
-                    <button class="btn btn-primary btn-lg gap-2 mt-6 w-full sm:w-auto" onclick="addTeamMember()">
+                    <button class="btn btn-primary btn-lg gap-2 mt-8 w-full sm:w-auto" onclick="addTeamMember()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
@@ -132,21 +183,28 @@
             </div>
 
             <!-- Results Section -->
-            <div class="card bg-base-100 shadow-xl hover:shadow-2xl border border-base-200">
-                <div class="card-body p-4 sm:p-6">
-                    <h2 class="card-title text-xl sm:text-2xl mb-4">Planning Results</h2>
+            <div class="card glass-card shadow-xl">
+                <div class="card-body p-6 sm:p-8">
+                    <h2 class="card-title text-2xl sm:text-3xl mb-6 flex items-center gap-3">
+                        <span class="badge badge-primary p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </span>
+                        Planning Results
+                    </h2>
                     <div id="results" class="prose max-w-full">
                         <!-- Results will be displayed here -->
                     </div>
-                    <div class="divider my-4"></div>
-                    <div class="flex flex-col gap-4">
-                        <button class="btn btn-primary btn-lg w-full hover:scale-[1.02] transform transition-all duration-200 shadow-lg hover:shadow-xl" onclick="generatePlan()">
+                    <div class="divider my-6"></div>
+                    <div class="flex flex-col gap-6">
+                        <button class="btn btn-primary btn-lg gap-2 w-full hover:scale-[1.02] transform transition-all duration-200 shadow-lg hover:shadow-xl" onclick="generatePlan()">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                             Generate Plan
                         </button>
-                        <div class="card bg-base-200 shadow-sm hover:shadow-md transition-all duration-300">
+                        <div class="card bg-base-200/50 backdrop-blur shadow-sm hover:shadow-md transition-all duration-300">
                             <div class="card-body p-6 items-center text-center">
                                 <div class="w-full flex justify-center">
                                     <div id="qrcode" class="bg-white rounded-xl shadow-inner w-[320px] h-[320px] flex items-center justify-center overflow-hidden"></div>
@@ -159,6 +217,31 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-4 bg-base-300/80 backdrop-blur-sm text-base-content fixed bottom-0 w-full border-t border-base-200">
+        <div>
+            <a href="https://linkedin.com/in/samet-utku-olgun/" target="_blank" class="btn btn-ghost gap-2 normal-case">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                </svg>
+                Connect on LinkedIn
+            </a>
+        </div>
+    </footer>
+
+    <!-- Add padding to main container to prevent content from being hidden by footer -->
+    <style>
+        @media (max-width: 640px) {
+            .container {
+                padding: 0.5rem;
+                padding-bottom: 5rem;
+            }
+        }
+        .container {
+            padding-bottom: 5rem;
+        }
+    </style>
 
     <!-- Add QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -787,7 +870,15 @@ Daily Maximum Working Hours per Team Member: ${maxDailyHours} hours
 
 Please analyze the project description and create a comprehensive task list following these guidelines:
 
-1. Project Analysis & Planning Phase:
+1. Weekly Schedule Structure:
+   - Each week must have tasks distributed across all 7 days (Monday to Sunday)
+   - Consider optimal task distribution across weekdays and weekends
+   - Ensure balanced workload throughout the week
+   - Respect daily maximum working hours per team member (${maxDailyHours} hours)
+   - Plan parallel tasks when possible to optimize timeline
+   - Consider dependencies when scheduling tasks across days
+
+2. Project Analysis & Planning Phase:
    - Analyze the project requirements from the description
    - Break down the main features and functionalities
    - Identify system architecture requirements
@@ -797,7 +888,7 @@ Please analyze the project description and create a comprehensive task list foll
    - Plan API endpoints (if required)
    - Define UI/UX requirements (if applicable)
 
-2. Development Environment Setup:
+3. Development Environment Setup:
    - Create detailed tasks for setting up:
      * Version control system
      * Development environment
@@ -808,7 +899,7 @@ Please analyze the project description and create a comprehensive task list foll
      * API testing tools
      * Code quality tools
 
-3. Core Feature Development:
+4. Core Feature Development:
    For each feature mentioned in the project description:
    - Create setup tasks
    - List database model creation tasks
@@ -818,7 +909,7 @@ Please analyze the project description and create a comprehensive task list foll
    - Add integration test tasks
    - Create documentation tasks
 
-4. Frontend Development (if applicable):
+5. Frontend Development (if applicable):
    Based on UI/UX requirements:
    - Component structure setup
    - State management implementation
@@ -828,7 +919,7 @@ Please analyze the project description and create a comprehensive task list foll
    - Component testing tasks
    - Browser compatibility testing
 
-5. Testing & Quality Assurance:
+6. Testing & Quality Assurance:
    Create specific tasks for:
    - Unit testing each component
    - Integration testing
@@ -838,7 +929,7 @@ Please analyze the project description and create a comprehensive task list foll
    - Cross-browser testing
    - Mobile responsiveness testing
 
-6. Deployment & Documentation:
+7. Deployment & Documentation:
    - Deployment preparation tasks
    - Server configuration
    - CI/CD pipeline setup
@@ -867,6 +958,20 @@ Task Organization Rules:
 6. Maximum ${maxDailyHours} hours per person per day
 7. Include buffer time for unexpected issues
 8. Account for code review and testing time
+9. Distribute tasks across all 7 days of each week
+10. Consider team availability and work patterns
+11. Plan for efficient parallel task execution
+12. Balance technical and non-technical tasks throughout the week
+
+Weekly Planning Requirements:
+1. Each week MUST have tasks planned for all 7 days
+2. Distribute complex tasks earlier in the week
+3. Use weekends for lighter tasks or buffer time
+4. Ensure continuous progress throughout the week
+5. Plan dependent tasks with appropriate gaps
+6. Consider team collaboration time slots
+7. Account for daily meetings and coordination
+8. Balance individual and team tasks across days
 
 Please create a detailed development plan that:
 - Is specifically tailored to the project description
@@ -875,7 +980,9 @@ Please create a detailed development plan that:
 - Ensures proper testing and documentation
 - Maintains clear technical dependencies
 - Provides accurate time and cost estimates
-- Considers team member expertise for assignments`,
+- Considers team member expertise for assignments
+- Utilizes all 7 days of each week effectively
+- Maintains a sustainable work rhythm across weeks`,
                 responseType: {
                     format: 'json',
                     structure: {
@@ -1339,7 +1446,7 @@ Please create a detailed development plan that:
     <!-- Footer -->
     <footer class="footer footer-center p-4 bg-base-300/80 backdrop-blur-sm text-base-content fixed bottom-0 w-full border-t border-base-200">
         <div>
-            <a href="https://linkedin.com/in/samet-utku-olgun/" target="_blank" class="btn btn-ghost gap-2">
+            <a href="https://linkedin.com/in/samet-utku-olgun/" target="_blank" class="btn btn-ghost gap-2 normal-case">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
                 </svg>
