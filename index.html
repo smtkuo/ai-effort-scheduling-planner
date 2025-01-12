@@ -1208,104 +1208,132 @@ Please create a detailed development plan that:
 
         // Add event listener to update task assignees when team members change
         function addTeamMemberChangeListener(memberDiv) {
+            if (!memberDiv) return;
+
             const nameInput = memberDiv.querySelector('input[placeholder="Team Member Name"]');
+            const rateInput = memberDiv.querySelector('input[type="number"]');
+            const currencySelect = memberDiv.querySelector('select');
+
+            if (!nameInput || !rateInput || !currencySelect) return;
+
+            // Update URL hash and assignee dropdowns when name changes
             nameInput.addEventListener('input', () => {
-                // Update all task assignee dropdowns
                 document.querySelectorAll('select[onchange^="updateTaskAssignee"]').forEach(select => {
                     const currentValue = select.value;
                     select.innerHTML = getTeamMemberOptions(currentValue);
                 });
                 updateUrlHash();
             });
-        }
 
-        // Update URL hash with all form data
-        function updateUrlHash() {
-            try {
-                const apiKey = document.getElementById('apiKey').value;
-                const projectDescription = document.getElementById('projectDescription').value;
-                const projectLanguage = document.getElementById('projectLanguage').value;
-                const maxDailyHours = document.getElementById('maxDailyHours').value || "8";
-                
-                const teamMembers = Array.from(document.querySelectorAll('.team-member')).map(member => {
-                    const nameInput = member.querySelector('input[type="text"]');
-                    const rateInput = member.querySelector('input[type="number"]');
-                    const currencySelect = member.querySelector('select');
-                    return {
-                        name: nameInput.value,
-                        rate: rateInput.value,
-                        currency: currencySelect.value
-                    };
-                });
-
-                const data = {
-                    apiKey,
-                    projectDescription,
-                    projectLanguage,
-                    maxDailyHours,
-                    teamMembers,
-                    projectPlan: window.projectPlanData
-                };
-
-                window.location.hash = btoa(JSON.stringify(data));
-                updateQRCode();
-            } catch (error) {
-                console.error('Error updating URL hash:', error);
-            }
-        }
-
-        // Add event listeners for all inputs
-        function addInputListeners() {
-            // Project details inputs
-            document.getElementById('apiKey').addEventListener('input', updateUrlHash);
-            document.getElementById('projectDescription').addEventListener('input', updateUrlHash);
-            document.getElementById('projectLanguage').addEventListener('change', updateUrlHash);
-            document.getElementById('maxDailyHours').addEventListener('input', updateUrlHash);
-
-            // Team member changes
-            const teamMembersContainer = document.getElementById('teamMembers');
-            teamMembersContainer.addEventListener('input', (e) => {
-                if (e.target.matches('input') || e.target.matches('select')) {
-                    updateUrlHash();
-                }
+            // Update URL hash when rate changes
+            rateInput.addEventListener('input', () => {
+                updateUrlHash();
             });
+
+            // Update URL hash when currency changes
+            currencySelect.addEventListener('change', () => {
+                updateUrlHash();
+            });
+        }
+
+        function updateUrlHash() {
+            const data = {
+                apiKey: document.getElementById('apiKey').value,
+                projectDescription: document.getElementById('projectDescription').value,
+                projectLanguage: document.getElementById('projectLanguage').value,
+                maxDailyHours: document.getElementById('maxDailyHours').value,
+                teamMembers: Array.from(document.querySelectorAll('#teamMembers .card')).map(card => ({
+                    name: card.querySelector('input[placeholder="Team Member Name"]').value,
+                    rate: card.querySelector('input[placeholder="0.00"]').value,
+                    currency: card.querySelector('select').value
+                })).filter(member => member.name && member.rate),
+                projectPlan: window.projectPlanData || null
+            };
+
+            window.location.hash = encodeURIComponent(JSON.stringify(data));
+            updateQRCode();
         }
 
         // Load data from URL hash
         function loadFromUrlHash() {
             try {
                 if (window.location.hash) {
-                    const decodedData = JSON.parse(atob(window.location.hash.substring(1)));
+                    const decodedData = JSON.parse(decodeURIComponent(window.location.hash.slice(1)));
                     
-                    // Set form values
-                    if (decodedData.apiKey) document.getElementById('apiKey').value = decodedData.apiKey;
-                    if (decodedData.projectDescription) document.getElementById('projectDescription').value = decodedData.projectDescription;
-                    if (decodedData.projectLanguage) document.getElementById('projectLanguage').value = decodedData.projectLanguage;
-                    if (decodedData.maxDailyHours) document.getElementById('maxDailyHours').value = decodedData.maxDailyHours;
+                    if (decodedData.apiKey) {
+                        document.getElementById('apiKey').value = decodedData.apiKey;
+                    }
                     
-                    // Load team members
-                    if (decodedData.teamMembers && decodedData.teamMembers.length > 0) {
+                    if (decodedData.projectDescription) {
+                        document.getElementById('projectDescription').value = decodedData.projectDescription;
+                    }
+                    
+                    if (decodedData.projectLanguage) {
+                        document.getElementById('projectLanguage').value = decodedData.projectLanguage;
+                        document.documentElement.lang = decodedData.projectLanguage;
+                    }
+
+                    if (decodedData.maxDailyHours) {
+                        document.getElementById('maxDailyHours').value = decodedData.maxDailyHours;
+                    }
+                    
+                    if (decodedData.teamMembers?.length > 0) {
+                        document.getElementById('teamMembers').innerHTML = '';
                         decodedData.teamMembers.forEach(member => {
                             addTeamMember(member);
                         });
+                    } else {
+                        addTeamMember();
                     }
                     
-                    // Load project plan
                     if (decodedData.projectPlan) {
                         window.projectPlanData = decodedData.projectPlan;
                         displayResults(window.projectPlanData);
                     }
+                } else {
+                    addTeamMember();
                 }
             } catch (error) {
                 console.error('Error parsing URL data:', error);
+                addTeamMember();
             }
+            // Always display timeline, even if empty
+            displayResults(window.projectPlanData);
         }
 
         // Initialize on page load
-        window.addEventListener('load', () => {
-            loadFromUrlHash();
-            addInputListeners();
-        });
+        window.onload = loadFromUrlHash;
+
+        // Add event listeners for URL hash updates
+        document.getElementById('apiKey').addEventListener('input', updateUrlHash);
+        document.getElementById('projectDescription').addEventListener('input', updateUrlHash);
+        document.getElementById('projectLanguage').addEventListener('change', updateUrlHash);
+
+        // Update addTeamMember function to include URL hash updates
+        const originalAddTeamMember = addTeamMember;
+        addTeamMember = function(name = '', rate = '', currency = 'USD') {
+            originalAddTeamMember(name, rate, currency);
+            
+            // Wait for the DOM to update
+            setTimeout(() => {
+                const newEntry = document.querySelector('.team-member-entry:last-child');
+                if (newEntry) {
+                    addTeamMemberChangeListener(newEntry);
+                    updateUrlHash();
+                }
+            }, 0);
+        };
+
+        // Update displayResults to include URL hash updates
+        const originalDisplayResults = displayResults;
+        displayResults = function(data) {
+            originalDisplayResults(data);
+            window.projectPlanData = data;
+            updateUrlHash();
+        };
+
+        // Add event listener for maxDailyHours
+        document.getElementById('maxDailyHours').addEventListener('input', updateUrlHash);
     </script>
 
     <!-- Footer -->
